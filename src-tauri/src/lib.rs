@@ -167,6 +167,39 @@ async fn check_printer() -> Result<Vec<String>, String> {
     .unwrap_or_else(|e| Err(e.to_string()))
 }
 
+/// Öffnet ein System-Werkzeug — NUR aus der festen Liste (Playbook-Regel).
+/// Erster Eintrag: der Taschenrechner (🔢-Gag-Knopf, Inhaber-Wunsch 29.07.).
+#[tauri::command]
+async fn open_tool(tool: String) -> Result<(), String> {
+    if tool != "calculator" {
+        return Err("unbekanntes Werkzeug".into());
+    }
+    #[cfg(target_os = "linux")]
+    {
+        for prog in ["gnome-calculator", "kcalc", "xcalc"] {
+            match befehl(prog).spawn() {
+                Ok(_) => return Ok(()),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+                Err(e) => return Err(e.to_string()),
+            }
+        }
+        Err("werkzeug-fehlt".into())
+    }
+    #[cfg(target_os = "windows")]
+    {
+        befehl("calc.exe").spawn().map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    #[cfg(target_os = "macos")]
+    {
+        befehl("open")
+            .args(["-a", "Calculator"])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+}
+
 /// Öffnet eine Web-Adresse im Standard-Browser — NUR aus der festen
 /// Ziel-Liste (Playbook-Regel), nie freie URLs.
 #[tauri::command]
@@ -202,7 +235,8 @@ pub fn run() {
             open_settings,
             check_online,
             check_printer,
-            open_url
+            open_url,
+            open_tool
         ])
         .setup(|app| {
             // Tray = Rettungsanker, falls der Hase mal außer Sicht ist (Plan § 3).

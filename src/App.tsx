@@ -380,12 +380,28 @@ export default function App() {
         ? ui.meineLektionen
         : ui.kursFortsetzen;
 
+  /* 🔢: süßer Gag MIT Nutzen — Rechen-Pose plus echter OS-Taschenrechner. */
+  const rechnenKlick = () => {
+    playDemo("calc");
+    invoke("open_tool", { tool: "calculator" }).catch((e) =>
+      console.error("open_tool fehlgeschlagen", e),
+    );
+  };
+
+  // Nur das Hauptmenü lässt den Hasen zur Seite hoppeln — beim „Zeigen“
+  // (Ecke, Arm hoch) bleibt er groß, die kleine Sprechblase reicht dort.
+  const menueOffen = !kurs && bubble === "menu";
+
   return (
-    <div className={`stage nobody-wrap--${state}${kurs ? " stage--kurs" : ""}`}>
+    <div
+      className={`stage nobody-wrap--${state}${kurs ? " stage--kurs" : ""}${
+        menueOffen ? " stage--menu" : ""
+      }`}
+    >
       {kurs && <Course sprache={sprache} onSignal={onKursSignal} onClose={kursSchliessen} />}
 
       {!kurs && bubble === "menu" && (
-        <div className="bubble" role="dialog" aria-label={ui.ariaSpricht}>
+        <div className="bubble bubble--panel" role="dialog" aria-label={ui.ariaSpricht}>
           <div className="bubble-title">
             <span>{ui.name}</span>
             <button className="bubble-close" onClick={closeBubble} aria-label={ui.blaseSchliessen}>
@@ -397,25 +413,36 @@ export default function App() {
             <button className="bubble-btn bubble-btn--primary" onClick={kursOeffnen}>
               {kursKnopf}
             </button>
-          </div>
-          <div className="bubble-grid" style={{ marginTop: 8 }}>
-            <button className="bubble-btn" onClick={hopAcross}>
-              {ui.hoppeln}
-            </button>
-            <button className="bubble-btn" onClick={() => playDemo("thinking")}>
-              {ui.nachdenken}
-            </button>
-            <button className="bubble-btn" onClick={() => playDemo("calc")}>
-              {ui.rechnen}
-            </button>
-            <button className="bubble-btn" onClick={() => playDemo("celebrating")}>
-              {ui.freuen}
-            </button>
-          </div>
-          <div className="bubble-actions">
             <button className="bubble-btn" onClick={showSettings}>
               {ui.einstellungenZeigen}
             </button>
+          </div>
+          <div className="gag-zeile">
+            <span className="gag-label">{ui.kunststuecke}</span>
+            <button className="gag-btn" onClick={hopAcross} aria-label={ui.hoppelnHint} title={ui.hoppelnHint}>
+              🐇
+            </button>
+            <button
+              className="gag-btn"
+              onClick={() => playDemo("thinking")}
+              aria-label={ui.nachdenkenHint}
+              title={ui.nachdenkenHint}
+            >
+              💭
+            </button>
+            <button className="gag-btn" onClick={rechnenKlick} aria-label={ui.rechnenHint} title={ui.rechnenHint}>
+              🔢
+            </button>
+            <button
+              className="gag-btn"
+              onClick={() => playDemo("celebrating")}
+              aria-label={ui.freuenHint}
+              title={ui.freuenHint}
+            >
+              🎉
+            </button>
+          </div>
+          <div className="bubble-grid">
             <button
               className="bubble-btn"
               onClick={() => {
@@ -428,6 +455,8 @@ export default function App() {
             <button className="bubble-btn" onClick={sprachWechsel}>
               {ui.sprachWechsel}
             </button>
+          </div>
+          <div className="bubble-actions" style={{ marginTop: 8 }}>
             <button className="bubble-btn" onClick={() => invoke("quit_app")}>
               {ui.beenden}
             </button>

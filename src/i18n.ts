@@ -42,10 +42,12 @@ export interface UiTexte {
   kursStarten: string;
   kursFortsetzen: string;
   meineLektionen: string;
-  hoppeln: string;
-  nachdenken: string;
-  rechnen: string;
-  freuen: string;
+  /** Gag-Reihe: Knöpfe sind nur Zeichen — die Hints tragen die Wörter (aria/title). */
+  kunststuecke: string;
+  hoppelnHint: string;
+  nachdenkenHint: string;
+  rechnenHint: string;
+  freuenHint: string;
   einstellungenZeigen: string;
   schlafen: string;
   beenden: string;
@@ -88,10 +90,11 @@ export const UI: Record<Sprache, UiTexte> = {
     kursStarten: "🥕 Computerkurs starten",
     kursFortsetzen: "🥕 Kurs fortsetzen",
     meineLektionen: "🥕 Meine Lektionen",
-    hoppeln: "🐇 Hoppeln",
-    nachdenken: "💭 Nachdenken",
-    rechnen: "🔢 Rechnen",
-    freuen: "🎉 Freuen",
+    kunststuecke: "Kunststücke:",
+    hoppelnHint: "Hoppeln",
+    nachdenkenHint: "Nachdenken",
+    rechnenHint: "Rechnen — öffnet den Taschenrechner",
+    freuenHint: "Freuen",
     einstellungenZeigen: "Zeig mir meine Einstellungen",
     schlafen: "Leg dich schlafen",
     beenden: "Beenden",
@@ -129,15 +132,15 @@ export const UI: Record<Sprache, UiTexte> = {
     ariaSpricht: "Nobody is talking",
     ariaZeigt: "Nobody is pointing at something",
     blaseSchliessen: "Close the speech bubble",
-    gruss:
-      "Hi! I'm Nobody — yes, really, that's my name. I live on your screen now. Soon I'll show you your computer, step by step. You set the pace.",
+    gruss: "Hi! I'm Nobody — yes, really, that's my name. What shall we do?",
     kursStarten: "🥕 Start the computer course",
     kursFortsetzen: "🥕 Continue the course",
     meineLektionen: "🥕 My lessons",
-    hoppeln: "🐇 Hop around",
-    nachdenken: "💭 Think",
-    rechnen: "🔢 Calculate",
-    freuen: "🎉 Celebrate",
+    kunststuecke: "Tricks:",
+    hoppelnHint: "Hop around",
+    nachdenkenHint: "Think",
+    rechnenHint: "Calculate — opens the calculator",
+    freuenHint: "Celebrate",
     einstellungenZeigen: "Show me my settings",
     schlafen: "Go to sleep",
     beenden: "Quit",

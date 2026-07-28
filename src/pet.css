@@ -525,13 +525,67 @@
   min-height: 56px;
 }
 
-/* Kurs-Modus: Hase rückt klein nach unten rechts */
-.stage--kurs .nobody-svg {
+/* Kurs- und Menü-Modus: Hase hoppelt klein zur Seite und macht Platz
+   (Inhaber-Vorgabe 29.07.: Kurs ist die Hauptsache, Gags weichen). */
+.nobody-svg {
+  transition: width 0.25s ease;
+}
+.stage--kurs .nobody-svg,
+.stage--menu .nobody-svg {
   width: 96px;
 }
-.stage--kurs .nobody {
+.stage--kurs .nobody,
+.stage--menu .nobody {
   align-self: flex-end;
   margin-right: 12px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .stage--menu .nobody-svg {
+    animation: nobody-hop 0.6s ease-in-out 1;
+  }
+}
+
+/* Menü als Panel (wie die Kurskarte): volle Fläche, Hase klein daneben */
+.bubble--panel {
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 132px;
+  transform: none;
+  width: auto;
+  max-height: none;
+}
+.bubble--panel::after {
+  display: none;
+}
+
+/* Gag-Reihe: Zeichen-Knöpfe, Wörter stecken in aria/title */
+.gag-zeile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 8px;
+}
+.gag-label {
+  font-size: 15px;
+  color: #9fb3c4;
+}
+.gag-btn {
+  flex: 1;
+  min-width: 48px;
+  min-height: 48px;
+  font-size: 24px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #16202c;
+  cursor: pointer;
+}
+.gag-btn:hover {
+  border-color: var(--cyan);
+}
+.gag-btn:focus-visible {
+  outline: 3px solid var(--cyan);
+  outline-offset: 2px;
 }
 .bubble-btn {
   display: block;
