@@ -14,7 +14,7 @@ import {
   speichereStand,
   textFuer,
   vorabErledigt,
-} from "./course";
+} from "./kurs";
 import { Sprache, UI } from "./i18n";
 
 /** Rückmeldungen an den Hasen (Gefühle gehören dem Tier, nicht der Karte). */

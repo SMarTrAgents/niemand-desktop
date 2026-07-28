@@ -9,7 +9,7 @@ import {
 } from "@tauri-apps/api/window";
 import NobodyRabbitSvg from "./NobodyRabbit";
 import Course, { PetSignal } from "./Course";
-import { KURS, ladeStand } from "./course";
+import { KURS, ladeStand } from "./kurs";
 import { Sprache, UI, ladeSprache, speichereSprache } from "./i18n";
 import "./pet.css";
 
