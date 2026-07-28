@@ -195,9 +195,10 @@ pub fn run() {
         .setup(|app| {
             // Tray = Rettungsanker, falls der Hase mal außer Sicht ist (Plan § 3).
             let rufen = MenuItem::with_id(app, "rufen", "Niemand rufen", true, None::<&str>)?;
+            let ecke = MenuItem::with_id(app, "ecke", "In die Ecke setzen", true, None::<&str>)?;
             let schlafen = MenuItem::with_id(app, "schlafen", "Schlafen legen", true, None::<&str>)?;
             let beenden = MenuItem::with_id(app, "beenden", "Beenden", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&rufen, &schlafen, &beenden])?;
+            let menu = Menu::with_items(app, &[&rufen, &ecke, &schlafen, &beenden])?;
 
             TrayIconBuilder::with_id("niemand-tray")
                 .icon(app.default_window_icon().unwrap().clone())
@@ -211,6 +212,9 @@ pub fn run() {
                             let _ = w.set_focus();
                         }
                         let _ = app.emit("niemand://rufen", ());
+                    }
+                    "ecke" => {
+                        let _ = app.emit("niemand://ecke", ());
                     }
                     "schlafen" => {
                         let _ = app.emit("niemand://schlafen", ());

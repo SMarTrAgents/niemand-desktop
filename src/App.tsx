@@ -76,7 +76,13 @@ export default function App() {
 
   useEffect(() => {
     armSleepTimer();
-    const onAny = () => wake();
+    const onAny = () => {
+      // Der Mensch gewinnt IMMER sofort gegen die Hoppel-Schleife —
+      // jeder Klick/Tastendruck bricht den Lauf ab (Inhaber-Befund 28.07.:
+      // „lässt sich nach Hoppeln nicht mehr verschieben“).
+      walkAbort.current = true;
+      wake();
+    };
     window.addEventListener("pointerdown", onAny);
     window.addEventListener("keydown", onAny);
     return () => {
@@ -112,25 +118,28 @@ export default function App() {
     }
   }, []);
 
-  /* --- Startposition: unten rechts auf dem Hauptmonitor. ------------------ */
-  useEffect(() => {
-    (async () => {
-      try {
-        const win = getCurrentWindow();
-        const mon = await primaryMonitor();
-        if (!mon) return;
-        const size = await win.outerSize();
-        await win.setPosition(
-          new PhysicalPosition(
-            mon.position.x + mon.size.width - size.width - 24,
-            mon.position.y + mon.size.height - size.height - 72,
-          ),
-        );
-      } catch (e) {
-        console.error("Startposition fehlgeschlagen", e);
-      }
-    })();
+  /* --- Unten rechts parken (Start + Tray „In die Ecke setzen“). ----------- */
+  const parkeUntenRechts = useCallback(async () => {
+    try {
+      walkAbort.current = true;
+      const win = getCurrentWindow();
+      const mon = await primaryMonitor();
+      if (!mon) return;
+      const size = await win.outerSize();
+      await win.setPosition(
+        new PhysicalPosition(
+          mon.position.x + mon.size.width - size.width - 24,
+          mon.position.y + mon.size.height - size.height - 72,
+        ),
+      );
+    } catch (e) {
+      console.error("Parken fehlgeschlagen", e);
+    }
   }, []);
+
+  useEffect(() => {
+    parkeUntenRechts();
+  }, [parkeUntenRechts]);
 
   /* --- Tray-Ereignisse (Rust-Seite). -------------------------------------- */
   useEffect(() => {
@@ -149,11 +158,15 @@ export default function App() {
       setzeFenster(FENSTER.normalB, FENSTER.normalH);
       setState("sleeping");
     }).then(merke);
+    listen("niemand://ecke", () => {
+      setState((s) => (s === "walking" ? "idle" : s));
+      parkeUntenRechts();
+    }).then(merke);
     return () => {
       tot = true;
       unlisten.forEach((u) => u());
     };
-  }, [wake, setzeFenster]);
+  }, [wake, setzeFenster, parkeUntenRechts]);
 
   /* --- Fenster sanft zu einer Zielposition bewegen (Hüpf-Etappen). -------- */
   const hopTo = useCallback(async (targetX: number, targetY: number, scale: number) => {
@@ -162,27 +175,35 @@ export default function App() {
     const dirX = Math.sign(targetX - start.x) || 1;
     setFlip(dirX > 0);
     setState("walking");
-    const hop = Math.round(HOP_PX * scale);
+    const hop = Math.max(8, Math.round(HOP_PX * scale));
     let x = start.x;
     let y = start.y;
     const totalHops = Math.max(1, Math.ceil(Math.abs(targetX - start.x) / hop));
     const yStep = (targetY - start.y) / totalHops;
-    while ((Math.abs(targetX - x) > 2 || Math.abs(targetY - y) > 2) && !walkAbort.current) {
+    // Harte Zeitbremse: egal was passiert, nach 10 s ist der Lauf vorbei
+    // (Inhaber-Befund: zäher IPC darf den Hasen nie „festnageln“).
+    const ende = Date.now() + 10_000;
+    while (
+      (Math.abs(targetX - x) > 2 || Math.abs(targetY - y) > 2) &&
+      !walkAbort.current &&
+      Date.now() < ende
+    ) {
       const fromX = x;
       const fromY = y;
       x += dirX * Math.min(hop, Math.abs(targetX - x));
       if (Math.abs(targetX - x) < 2) x = targetX;
       y = Math.abs(targetY - (y + yStep)) < Math.abs(yStep) ? targetY : y + yStep;
-      const frames = 8;
+      const frames = 5;
       for (let i = 1; i <= frames; i++) {
+        if (walkAbort.current) return;
         const t = i / frames;
         const eased = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
         await win.setPosition(
           new PhysicalPosition(Math.round(fromX + (x - fromX) * eased), Math.round(fromY + (y - fromY) * eased)),
         );
-        await new Promise((r) => setTimeout(r, 22));
+        await new Promise((r) => setTimeout(r, 16));
       }
-      await new Promise((r) => setTimeout(r, 110));
+      await new Promise((r) => setTimeout(r, 70));
     }
   }, []);
 

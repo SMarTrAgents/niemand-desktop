@@ -48,13 +48,14 @@
   transform: scaleX(-1);
 }
 
-/* Zieh-Griff: die Ohren. Der Körper öffnet die Sprechblase. */
+/* Zieh-Griff: Ohren + Kopf (großzügig — Inhaber-Befund: Ziehen muss immer
+   leicht gehen). Der untere Körper öffnet die Sprechblase. */
 .nobody-drag {
   position: absolute;
   top: 0;
-  left: 20%;
-  width: 60%;
-  height: 34%;
+  left: 10%;
+  width: 80%;
+  height: 46%;
   cursor: grab;
 }
 
