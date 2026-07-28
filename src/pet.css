@@ -351,6 +351,12 @@
   left: 50%;
   transform: translateX(-50%);
   width: min(296px, calc(100vw - 16px));
+  /* Visualisierungsgrundsatz (Cloud-Konvention): Textflächen wachsen mit dem
+     Inhalt bis zum Deckel — danach scrollt der TEXT innen. Nie abschneiden,
+     Knöpfe bleiben immer sichtbar. */
+  max-height: calc(100vh - 196px);
+  display: flex;
+  flex-direction: column;
   background: var(--card);
   color: var(--text);
   border: 1px solid var(--line);
@@ -397,6 +403,10 @@
 }
 .bubble-text {
   margin: 0 0 12px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .bubble-actions {
   display: grid;
@@ -407,6 +417,111 @@
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-bottom: 8px;
+}
+
+/* --- Kurskarte (Szenen-Player) --------------------------------------------
+   Gleiche Textregel wie die Sprechblase: Karte füllt das Fenster oberhalb
+   des (verkleinerten) Hasen, langer Text scrollt INNEN, Knöpfe bleiben
+   immer sichtbar — nichts wird abgeschnitten. */
+.course {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 132px;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 18px;
+  line-height: 1.5;
+}
+.course-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 700;
+  color: var(--cyan);
+  font-size: 17px;
+  margin-bottom: 8px;
+}
+.course-text,
+.course-frage {
+  margin: 0 0 12px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.course-frage {
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+.course-hinweis {
+  margin: 10px 0 0;
+  padding: 10px;
+  border-radius: 10px;
+  background: #1c2a1e;
+  border: 1px solid #2e5233;
+  flex: 0 0 auto;
+}
+.moehren {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  font-size: 20px;
+  flex: 0 0 auto;
+}
+.moehre {
+  opacity: 0.25;
+  filter: grayscale(1);
+}
+.moehre--voll {
+  opacity: 1;
+  filter: none;
+}
+.course-liste {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  overflow-y: auto;
+  min-height: 0;
+}
+.course-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #16202c;
+  color: var(--text);
+  font-size: 17px;
+  text-align: left;
+  cursor: pointer;
+}
+.course-item:hover {
+  border-color: var(--cyan);
+}
+.course-item-check {
+  color: var(--cyan);
+  font-weight: 700;
+  width: 20px;
+}
+/* Kurs-Modus: Hase rückt klein nach unten rechts */
+.stage--kurs .nobody-svg {
+  width: 96px;
+}
+.stage--kurs .nobody {
+  align-self: flex-end;
+  margin-right: 12px;
 }
 .bubble-btn {
   display: block;

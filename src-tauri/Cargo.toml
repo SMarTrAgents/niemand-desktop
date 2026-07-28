@@ -1,6 +1,6 @@
 [package]
 name = "niemand-desktop"
-version = "0.2.0"
+version = "0.3.0"
 description = "Niemand — der weiße Hase von SMarTrAgents als Desktop-Tierchen"
 authors = ["SMarTrAgents"]
 edition = "2021"

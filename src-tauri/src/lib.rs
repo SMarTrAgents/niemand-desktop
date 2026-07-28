@@ -46,6 +46,78 @@ fn open_settings(panel: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Internet da? App-eigene Wahrheit: kommen wir zu unserer Cloud durch?
+/// (Plan § 4: Konnektivität statt SSID — keine Location-Berechtigung nötig.)
+#[tauri::command]
+fn check_online() -> bool {
+    use std::net::{TcpStream, ToSocketAddrs};
+    use std::time::Duration;
+    if let Ok(mut addrs) = "cloud.smartragents.ai:443".to_socket_addrs() {
+        if let Some(addr) = addrs.next() {
+            return TcpStream::connect_timeout(&addr, Duration::from_secs(3)).is_ok();
+        }
+    }
+    false
+}
+
+/// Eingerichtete Drucker auflisten — ohne Adminrechte, ohne Prompts
+/// (lpstat auf Linux/macOS, Get-Printer auf Windows; Plan § 4 Akt 1.4).
+#[tauri::command]
+fn check_printer() -> Result<Vec<String>, String> {
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    {
+        let out = std::process::Command::new("lpstat")
+            .arg("-p")
+            .output()
+            .map_err(|e| e.to_string())?;
+        let s = String::from_utf8_lossy(&out.stdout);
+        // lpstat spricht je nach Systemsprache "printer X …" oder "Drucker X …"
+        Ok(s
+            .lines()
+            .filter_map(|l| {
+                l.strip_prefix("printer ")
+                    .or_else(|| l.strip_prefix("Drucker "))
+                    .and_then(|r| r.split_whitespace().next())
+                    .map(|n| n.to_string())
+            })
+            .collect())
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let out = std::process::Command::new("powershell")
+            .args(["-NoProfile", "-Command", "(Get-Printer).Name"])
+            .output()
+            .map_err(|e| e.to_string())?;
+        let s = String::from_utf8_lossy(&out.stdout);
+        Ok(s.lines()
+            .map(|l| l.trim().to_string())
+            .filter(|l| !l.is_empty())
+            .collect())
+    }
+}
+
+/// Öffnet eine Web-Adresse im Standard-Browser — NUR aus der festen
+/// Ziel-Liste (Playbook-Regel), nie freie URLs.
+#[tauri::command]
+fn open_url(target: String) -> Result<(), String> {
+    let url = match target.as_str() {
+        "cloud" => "https://cloud.smartragents.ai",
+        "homepage" => "https://smartragents.ai",
+        _ => return Err("unbekanntes Ziel".into()),
+    };
+    #[cfg(target_os = "linux")]
+    let c: (&str, Vec<&str>) = ("xdg-open", vec![url]);
+    #[cfg(target_os = "windows")]
+    let c: (&str, Vec<&str>) = ("cmd", vec!["/C", "start", "", url]);
+    #[cfg(target_os = "macos")]
+    let c: (&str, Vec<&str>) = ("open", vec![url]);
+    std::process::Command::new(c.0)
+        .args(&c.1)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 pub fn run() {
     tauri::Builder::default()
         // Zweiter Doppelklick aufs Icon erzeugt keinen zweiten Hasen,
@@ -57,7 +129,13 @@ pub fn run() {
             }
             let _ = app.emit("niemand://rufen", ());
         }))
-        .invoke_handler(tauri::generate_handler![quit_app, open_settings])
+        .invoke_handler(tauri::generate_handler![
+            quit_app,
+            open_settings,
+            check_online,
+            check_printer,
+            open_url
+        ])
         .setup(|app| {
             // Tray = Rettungsanker, falls der Hase mal außer Sicht ist (Plan § 3).
             let rufen = MenuItem::with_id(app, "rufen", "Niemand rufen", true, None::<&str>)?;

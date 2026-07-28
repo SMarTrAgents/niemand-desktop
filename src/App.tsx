@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow, primaryMonitor, PhysicalPosition } from "@tauri-apps/api/window";
+import {
+  getCurrentWindow,
+  primaryMonitor,
+  PhysicalPosition,
+  PhysicalSize,
+} from "@tauri-apps/api/window";
 import NobodyRabbitSvg from "./NobodyRabbit";
+import Course, { PetSignal } from "./Course";
+import { KURS, ladeStand } from "./course";
 import "./pet.css";
 
 /** Zustände des Tierchens (Superset des Cloud-Widgets, Plan § 3). */
@@ -25,6 +32,7 @@ type BubbleView = "closed" | "menu" | "zeigen";
 const SLEEP_AFTER_MS = 5 * 60 * 1000; // Einschlafen nach 5 min ohne Interaktion (Anti-Clippy, Plan § 1)
 const HOP_PX = 56; // logische Pixel pro Hüpfer
 const DEMO_MS = 4200; // Dauer der Nachdenk-/Rechen-Vorführung
+const FENSTER = { normalB: 320, normalH: 520, kursB: 400, kursH: 640 };
 
 const CONFETTI = Array.from({ length: 10 }, (_, i) => ({
   cx: `${(i - 5) * 26 + 8}px`,
@@ -36,8 +44,11 @@ export default function App() {
   const [state, setState] = useState<PetState>("idle");
   const [flip, setFlip] = useState(false);
   const [bubble, setBubble] = useState<BubbleView>("closed");
+  const [kurs, setKurs] = useState(false);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const kursRef = useRef(kurs);
+  kursRef.current = kurs;
   const walkAbort = useRef(false);
   const sleepTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const demoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,6 +57,7 @@ export default function App() {
   const armSleepTimer = useCallback(() => {
     if (sleepTimer.current) clearTimeout(sleepTimer.current);
     sleepTimer.current = setTimeout(() => {
+      if (kursRef.current) return; // im Kurs schläft Niemand nicht ein
       walkAbort.current = true;
       setBubble("closed");
       setState("sleeping");
@@ -72,6 +84,30 @@ export default function App() {
       window.removeEventListener("keydown", onAny);
     };
   }, [armSleepTimer, wake]);
+
+  /* --- Fenstergröße (Kurs braucht mehr Platz; Position bleibt auf dem Schirm). */
+  const setzeFenster = useCallback(async (breite: number, hoehe: number) => {
+    try {
+      const win = getCurrentWindow();
+      const mon = await primaryMonitor();
+      const sf = mon?.scaleFactor ?? 1;
+      await win.setSize(new PhysicalSize(Math.round(breite * sf), Math.round(hoehe * sf)));
+      if (mon) {
+        const pos = await win.outerPosition();
+        const size = await win.outerSize();
+        const maxX = mon.position.x + mon.size.width - size.width - 8;
+        const maxY = mon.position.y + mon.size.height - size.height - 8;
+        await win.setPosition(
+          new PhysicalPosition(
+            Math.min(Math.max(pos.x, mon.position.x + 8), maxX),
+            Math.min(Math.max(pos.y, mon.position.y + 8), maxY),
+          ),
+        );
+      }
+    } catch (e) {
+      console.error("Fenstergröße fehlgeschlagen", e);
+    }
+  }, []);
 
   /* --- Startposition: unten rechts auf dem Hauptmonitor. ------------------ */
   useEffect(() => {
@@ -104,10 +140,12 @@ export default function App() {
     listen("niemand://schlafen", () => {
       walkAbort.current = true;
       setBubble("closed");
+      setKurs(false);
+      setzeFenster(FENSTER.normalB, FENSTER.normalH);
       setState("sleeping");
     }).then((u) => unlisten.push(u));
     return () => unlisten.forEach((u) => u());
-  }, [wake]);
+  }, [wake, setzeFenster]);
 
   /* --- Fenster sanft zu einer Zielposition bewegen (Hüpf-Etappen). -------- */
   const hopTo = useCallback(async (targetX: number, targetY: number, scale: number) => {
@@ -206,9 +244,40 @@ export default function App() {
     [],
   );
 
+  /* --- Kurs öffnen/schließen (Fenster wächst mit — Textfeld-Regel!). ------ */
+  const kursOeffnen = useCallback(async () => {
+    setBubble("closed");
+    setState("talking");
+    setKurs(true);
+    await setzeFenster(FENSTER.kursB, FENSTER.kursH);
+  }, [setzeFenster]);
+
+  const kursSchliessen = useCallback(async () => {
+    setKurs(false);
+    setState("idle");
+    await setzeFenster(FENSTER.normalB, FENSTER.normalH);
+  }, [setzeFenster]);
+
+  /* Gefühls-Signale aus dem Kurs → Tierchen-Zustände. */
+  const onKursSignal = useCallback((s: PetSignal) => {
+    if (demoTimer.current) clearTimeout(demoTimer.current);
+    if (s === "denken") setState("thinking");
+    else if (s === "zeigen") {
+      setState("waving");
+      demoTimer.current = setTimeout(() => setState((x) => (x === "waving" ? "talking" : x)), 2200);
+    } else if (s === "freude") {
+      setState("heart");
+      demoTimer.current = setTimeout(() => setState((x) => (x === "heart" ? "talking" : x)), 1600);
+    } else if (s === "feiern") {
+      setState("celebrating"); // Akt-Finale: hier darf Konfetti (Plan § 1)
+      demoTimer.current = setTimeout(() => setState((x) => (x === "celebrating" ? "talking" : x)), 2200);
+    } else setState("talking");
+  }, []);
+
   /* --- Getragen werden: große Augen + Baumeln, solange gezogen wird. ------ */
   const onCarryStart = useCallback(() => {
     if (stateRef.current === "walking") walkAbort.current = true;
+    if (kursRef.current) return;
     setState("carried");
     if (demoTimer.current) clearTimeout(demoTimer.current);
     demoTimer.current = setTimeout(() => setState((s) => (s === "carried" ? "idle" : s)), 2600);
@@ -217,6 +286,11 @@ export default function App() {
   /* --- Klick auf den Hasen: Sprechblase auf/zu (Pull statt Push). --------- */
   const onRabbitClick = useCallback(() => {
     wake();
+    if (kursRef.current) {
+      setState("waving");
+      setTimeout(() => setState((s) => (s === "waving" ? "talking" : s)), 1800);
+      return;
+    }
     if (stateRef.current === "walking") {
       walkAbort.current = true;
       return;
@@ -257,9 +331,20 @@ export default function App() {
     }
   };
 
+  const stand = ladeStand();
+  const kursFortschritt = KURS.filter((s) => stand.erledigt[s.id]).length;
+  const kursKnopf =
+    stand.level === null
+      ? "🥕 Computerkurs starten"
+      : kursFortschritt >= KURS.length
+        ? "🥕 Meine Lektionen"
+        : "🥕 Kurs fortsetzen";
+
   return (
-    <div className={`stage nobody-wrap--${state}`}>
-      {bubble === "menu" && (
+    <div className={`stage nobody-wrap--${state}${kurs ? " stage--kurs" : ""}`}>
+      {kurs && <Course onSignal={onKursSignal} onClose={kursSchliessen} />}
+
+      {!kurs && bubble === "menu" && (
         <div className="bubble" role="dialog" aria-label="Niemand spricht">
           <div className="bubble-title">
             <span>Niemand</span>
@@ -268,7 +353,12 @@ export default function App() {
             </button>
           </div>
           <p className="bubble-text">Hallo! Ich bin Niemand. Was wollen wir machen?</p>
-          <div className="bubble-grid">
+          <div className="bubble-actions">
+            <button className="bubble-btn bubble-btn--primary" onClick={kursOeffnen}>
+              {kursKnopf}
+            </button>
+          </div>
+          <div className="bubble-grid" style={{ marginTop: 8 }}>
             <button className="bubble-btn" onClick={hopAcross}>
               🐇 Hoppeln
             </button>
@@ -283,7 +373,7 @@ export default function App() {
             </button>
           </div>
           <div className="bubble-actions">
-            <button className="bubble-btn bubble-btn--primary" onClick={showSettings}>
+            <button className="bubble-btn" onClick={showSettings}>
               Zeig mir meine Einstellungen
             </button>
             <button
@@ -302,7 +392,7 @@ export default function App() {
         </div>
       )}
 
-      {bubble === "zeigen" && (
+      {!kurs && bubble === "zeigen" && (
         <div className="bubble" role="dialog" aria-label="Niemand zeigt etwas">
           <div className="bubble-title">
             <span>Niemand</span>
