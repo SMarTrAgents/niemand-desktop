@@ -15,12 +15,16 @@ oder Ausbildung — jeder bekommt seine eigenen Beispiele, Senioren größere Sc
 > **Mensch mit Maschine:** Niemand erklärt und schlägt vor — ausgeführt wird nur,
 > was du selbst anklickst. Er unterbricht dich nie von sich aus.
 
-**🇬🇧 English:** Nobody is the white rabbit from smartragents.ai — a fully animated
-desktop pet for Windows, macOS and Ubuntu with a built-in **free computer course
-for young and old**. He teaches Wi-Fi, printers, files, safe passwords, the browser
-with tabs and favorites — and then introduces your AI helpers at
-cloud.smartragents.ai. The course adapts to your knowledge and your life situation.
-Nobody speaks English and German. The course is free. Forever.
+## 🇬🇧 Nobody — the free computer course for young and old
+
+Nobody is the white rabbit from [smartragents.ai](https://smartragents.ai) — a fully
+animated **desktop pet** for Windows, macOS and Ubuntu with a built-in **free
+computer course for young and old**. He teaches Wi-Fi, printers, files, safe
+passwords, shutting down properly, the browser with tabs and favorites — and then
+introduces your AI helpers at [cloud.smartragents.ai](https://cloud.smartragents.ai).
+The course adapts to your knowledge (quick check at the start) and your life
+situation (retirement, work or school — everyone gets their own examples, seniors
+get bigger text). Nobody speaks English and German. The course is free. Forever.
 
 ## Herunterladen
 
