@@ -23,6 +23,18 @@ fn quit_app(app: tauri::AppHandle) {
     app.exit(0);
 }
 
+/// Tray-Sprache zur Laufzeit aus der Umgebung: LC_ALL vor LANG (Konvention).
+/// Beginnt der Wert mit „de“ → Deutsch, sonst Englisch (Zweisprachigkeit 0.5.0;
+/// die Oberfläche selbst wählt ihre Sprache im Webview über i18n.ts).
+fn tray_ist_deutsch() -> bool {
+    ["LC_ALL", "LANG"]
+        .iter()
+        .filter_map(|k| std::env::var(k).ok())
+        .find(|v| !v.is_empty())
+        .map(|v| v.starts_with("de"))
+        .unwrap_or(false)
+}
+
 /// Öffnet eine System-Einstellungsseite per Deep-Link — NUR aus der festen
 /// Ziel-Liste, nie aus freien Strings (Playbook-Regel, Plan § 8.4). Wird
 /// ausschließlich durch einen Nutzer-Klick auf eine AUFTRAG-Karte ausgelöst.
@@ -194,17 +206,34 @@ pub fn run() {
         ])
         .setup(|app| {
             // Tray = Rettungsanker, falls der Hase mal außer Sicht ist (Plan § 3).
-            let rufen = MenuItem::with_id(app, "rufen", "Niemand rufen", true, None::<&str>)?;
-            let ecke = MenuItem::with_id(app, "ecke", "In die Ecke setzen", true, None::<&str>)?;
-            let schlafen = MenuItem::with_id(app, "schlafen", "Schlafen legen", true, None::<&str>)?;
-            let beenden = MenuItem::with_id(app, "beenden", "Beenden", true, None::<&str>)?;
+            let (t_rufen, t_ecke, t_schlafen, t_beenden, t_tooltip) = if tray_ist_deutsch() {
+                (
+                    "Niemand rufen",
+                    "In die Ecke setzen",
+                    "Schlafen legen",
+                    "Beenden",
+                    "Niemand — der weiße Hase",
+                )
+            } else {
+                (
+                    "Call Nobody",
+                    "Put in the corner",
+                    "Go to sleep",
+                    "Quit",
+                    "Nobody — the white rabbit",
+                )
+            };
+            let rufen = MenuItem::with_id(app, "rufen", t_rufen, true, None::<&str>)?;
+            let ecke = MenuItem::with_id(app, "ecke", t_ecke, true, None::<&str>)?;
+            let schlafen = MenuItem::with_id(app, "schlafen", t_schlafen, true, None::<&str>)?;
+            let beenden = MenuItem::with_id(app, "beenden", t_beenden, true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&rufen, &ecke, &schlafen, &beenden])?;
 
             TrayIconBuilder::with_id("niemand-tray")
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
                 .show_menu_on_left_click(true)
-                .tooltip("Niemand — der weiße Hase")
+                .tooltip(t_tooltip)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "rufen" => {
                         if let Some(w) = app.get_webview_window("main") {

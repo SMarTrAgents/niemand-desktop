@@ -10,6 +10,7 @@ import {
 import NobodyRabbitSvg from "./NobodyRabbit";
 import Course, { PetSignal } from "./Course";
 import { KURS, ladeStand } from "./course";
+import { Sprache, UI, ladeSprache, speichereSprache } from "./i18n";
 import "./pet.css";
 
 /** Zustände des Tierchens (Superset des Cloud-Widgets, Plan § 3). */
@@ -45,6 +46,14 @@ export default function App() {
   const [flip, setFlip] = useState(false);
   const [bubble, setBubble] = useState<BubbleView>("closed");
   const [kurs, setKurs] = useState(false);
+  const [sprache, setSprache] = useState<Sprache>(() => ladeSprache());
+  const ui = UI[sprache];
+  /* Umschalt-Knopf zeigt die andere Sprache; Wahl bleibt gespeichert. */
+  const sprachWechsel = () => {
+    const neu: Sprache = sprache === "de" ? "en" : "de";
+    setSprache(neu);
+    speichereSprache(neu);
+  };
   const stateRef = useRef(state);
   stateRef.current = state;
   const kursRef = useRef(kurs);
@@ -366,24 +375,24 @@ export default function App() {
   const kursFortschritt = KURS.filter((s) => stand.erledigt[s.id]).length;
   const kursKnopf =
     stand.level === null
-      ? "🥕 Computerkurs starten"
+      ? ui.kursStarten
       : kursFortschritt >= KURS.length
-        ? "🥕 Meine Lektionen"
-        : "🥕 Kurs fortsetzen";
+        ? ui.meineLektionen
+        : ui.kursFortsetzen;
 
   return (
     <div className={`stage nobody-wrap--${state}${kurs ? " stage--kurs" : ""}`}>
-      {kurs && <Course onSignal={onKursSignal} onClose={kursSchliessen} />}
+      {kurs && <Course sprache={sprache} onSignal={onKursSignal} onClose={kursSchliessen} />}
 
       {!kurs && bubble === "menu" && (
-        <div className="bubble" role="dialog" aria-label="Niemand spricht">
+        <div className="bubble" role="dialog" aria-label={ui.ariaSpricht}>
           <div className="bubble-title">
-            <span>Niemand</span>
-            <button className="bubble-close" onClick={closeBubble} aria-label="Sprechblase schließen">
+            <span>{ui.name}</span>
+            <button className="bubble-close" onClick={closeBubble} aria-label={ui.blaseSchliessen}>
               ✕
             </button>
           </div>
-          <p className="bubble-text">Hallo! Ich bin Niemand. Was wollen wir machen?</p>
+          <p className="bubble-text">{ui.gruss}</p>
           <div className="bubble-actions">
             <button className="bubble-btn bubble-btn--primary" onClick={kursOeffnen}>
               {kursKnopf}
@@ -391,21 +400,21 @@ export default function App() {
           </div>
           <div className="bubble-grid" style={{ marginTop: 8 }}>
             <button className="bubble-btn" onClick={hopAcross}>
-              🐇 Hoppeln
+              {ui.hoppeln}
             </button>
             <button className="bubble-btn" onClick={() => playDemo("thinking")}>
-              💭 Nachdenken
+              {ui.nachdenken}
             </button>
             <button className="bubble-btn" onClick={() => playDemo("calc")}>
-              🔢 Rechnen
+              {ui.rechnen}
             </button>
             <button className="bubble-btn" onClick={() => playDemo("celebrating")}>
-              🎉 Freuen
+              {ui.freuen}
             </button>
           </div>
           <div className="bubble-actions">
             <button className="bubble-btn" onClick={showSettings}>
-              Zeig mir meine Einstellungen
+              {ui.einstellungenZeigen}
             </button>
             <button
               className="bubble-btn"
@@ -414,33 +423,33 @@ export default function App() {
                 setState("sleeping");
               }}
             >
-              Leg dich schlafen
+              {ui.schlafen}
+            </button>
+            <button className="bubble-btn" onClick={sprachWechsel}>
+              {ui.sprachWechsel}
             </button>
             <button className="bubble-btn" onClick={() => invoke("quit_app")}>
-              Beenden
+              {ui.beenden}
             </button>
           </div>
         </div>
       )}
 
       {!kurs && bubble === "zeigen" && (
-        <div className="bubble" role="dialog" aria-label="Niemand zeigt etwas">
+        <div className="bubble" role="dialog" aria-label={ui.ariaZeigt}>
           <div className="bubble-title">
-            <span>Niemand</span>
-            <button className="bubble-close" onClick={closeBubble} aria-label="Sprechblase schließen">
+            <span>{ui.name}</span>
+            <button className="bubble-close" onClick={closeBubble} aria-label={ui.blaseSchliessen}>
               ✕
             </button>
           </div>
-          <p className="bubble-text">
-            Schau — da oben! Da wohnen deine Einstellungen. Auch der Ton: lauter und leiser. Soll ich
-            sie dir öffnen?
-          </p>
+          <p className="bubble-text">{ui.zeigenText}</p>
           <div className="bubble-actions">
             <button className="bubble-btn bubble-btn--primary" onClick={openSound}>
-              AUFTRAG: Öffne die Ton-Einstellungen
+              {ui.auftragTon}
             </button>
             <button className="bubble-btn" onClick={closeBubble}>
-              Später
+              {ui.spaeter}
             </button>
           </div>
         </div>
@@ -464,14 +473,14 @@ export default function App() {
           state === "pointing" ? " nobody--point-up" : ""
         }`}
         onClick={onRabbitClick}
-        aria-label="Niemand, der weiße Hase — anklicken zum Reden"
-        title="Niemand"
+        aria-label={ui.hasenAria}
+        title={ui.name}
       >
         <span className="nobody-ring" aria-hidden="true" />
         <span className="nobody-arrow nobody-arrow--up" aria-hidden="true">
           ➤
         </span>
-        <NobodyRabbitSvg className="nobody-svg" title="Niemand, der weiße Hase" />
+        <NobodyRabbitSvg className="nobody-svg" title={ui.hasenTitel} />
         {/* Ohren = Zieh-Griff zum Umsetzen (WCAG 2.5.7: geht auch ohne Ziehen übers Hoppeln) */}
         <span
           className="nobody-drag"

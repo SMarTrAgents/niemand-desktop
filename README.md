@@ -1,14 +1,26 @@
-# 🐇 Niemand — dein Begleiter auf dem Schreibtisch
+# 🐇 Niemand / Nobody — der Gratis-Computerkurs für Jung und Alt
 
-**Niemand** (englisch *Nobody*) ist der weiße Hase von [SMarTrAgents](https://smartragents.ai) —
-ein vollanimiertes **Desktop-Tierchen** für Windows, macOS und Ubuntu.
+**Niemand** (englisch **Nobody** — ja, wirklich, so heißt er) ist der weiße Hase von
+[SMarTrAgents](https://smartragents.ai) — ein vollanimiertes **Desktop-Tierchen** für
+Windows, macOS und Ubuntu mit eingebautem, **kostenlosem Computerkurs**.
 
-Er wohnt auf deinem Bildschirm, erklärt dir deinen Computer Schritt für Schritt
-(WLAN, Drucker, Dateien, Schreiben und Rechnen), richtet mit dir einen Browser ein
-und stellt dir danach deine KI-Helfer auf [cloud.smartragents.ai](https://cloud.smartragents.ai) vor.
+Er wohnt auf deinem Bildschirm und erklärt dir deinen Computer Schritt für Schritt:
+WLAN, Drucker, Dateien, richtig ausschalten, sicher bleiben — dann der Browser mit
+Tabs und Favoriten — und zum Schluss stellt er dir deine KI-Helfer auf
+[cloud.smartragents.ai](https://cloud.smartragents.ai) vor. Der Kurs passt sich an:
+an dein Wissen (drei kurze Fragen am Anfang) und an dein Leben (Ruhestand, Beruf
+oder Ausbildung — jeder bekommt seine eigenen Beispiele, Senioren größere Schrift).
+**Der Kurs ist gratis. Für immer.** Niemand spricht Deutsch und Englisch.
 
 > **Mensch mit Maschine:** Niemand erklärt und schlägt vor — ausgeführt wird nur,
 > was du selbst anklickst. Er unterbricht dich nie von sich aus.
+
+**🇬🇧 English:** Nobody is the white rabbit from smartragents.ai — a fully animated
+desktop pet for Windows, macOS and Ubuntu with a built-in **free computer course
+for young and old**. He teaches Wi-Fi, printers, files, safe passwords, the browser
+with tabs and favorites — and then introduces your AI helpers at
+cloud.smartragents.ai. The course adapts to your knowledge and your life situation.
+Nobody speaks English and German. The course is free. Forever.
 
 ## Herunterladen
 

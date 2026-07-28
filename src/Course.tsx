@@ -6,6 +6,7 @@ import {
   GRUPPEN_OPTIONEN,
   KURS,
   KursStand,
+  LText,
   Schritt,
   Szene,
   ladeStand,
@@ -14,11 +15,13 @@ import {
   textFuer,
   vorabErledigt,
 } from "./course";
+import { Sprache, UI } from "./i18n";
 
 /** Rückmeldungen an den Hasen (Gefühle gehören dem Tier, nicht der Karte). */
 export type PetSignal = "denken" | "freude" | "zeigen" | "feiern" | "ruhe";
 
 interface Props {
+  sprache: Sprache;
   onSignal: (s: PetSignal) => void;
   onClose: () => void;
 }
@@ -28,7 +31,7 @@ type View =
   | { art: "liste" }
   | { art: "szene"; szene: Szene; schritt: number };
 
-export default function Course({ onSignal, onClose }: Props) {
+export default function Course({ sprache, onSignal, onClose }: Props) {
   const [stand, setStand] = useState<KursStand>(() => ladeStand());
   const [view, setView] = useState<View>(() => {
     const s = ladeStand();
@@ -43,7 +46,8 @@ export default function Course({ onSignal, onClose }: Props) {
   const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const zg = stand.zielgruppe ?? null;
-  const t = useCallback((x: Parameters<typeof textFuer>[0]) => textFuer(x, zg), [zg]);
+  const t = useCallback((x: LText) => textFuer(x, sprache, zg), [sprache, zg]);
+  const ui = UI[sprache];
 
   const speichern = useCallback((s: KursStand) => {
     setStand(s);
@@ -154,21 +158,19 @@ export default function Course({ onSignal, onClose }: Props) {
 
   if (view.art === "check" && view.phase === "wissen") {
     return (
-      <div className={kursKlasse} role="dialog" aria-label="Kennenlernen">
+      <div className={kursKlasse} role="dialog" aria-label={ui.ariaKennenlernen}>
         <div className="course-head">
-          <span>Erst mal kennenlernen</span>
-          <button className="bubble-close" onClick={onClose} aria-label="Kurs schließen">
+          <span>{ui.kennenlernenTitel}</span>
+          <button className="bubble-close" onClick={onClose} aria-label={ui.kursSchliessen}>
             ✕
           </button>
         </div>
-        <p className="course-text">
-          Ein paar kurze Fragen — es gibt keine falschen Antworten. So weiß ich, wo wir anfangen.
-        </p>
-        <p className="course-frage">{CHECK_FRAGEN[checkNr]}</p>
+        <p className="course-text">{ui.kennenlernenText}</p>
+        <p className="course-frage">{t(CHECK_FRAGEN[checkNr])}</p>
         <div className="bubble-actions">
           {[
-            { t: "Ja", ja: true },
-            { t: "Nein, noch nicht", ja: false },
+            { t: ui.ja, ja: true },
+            { t: ui.neinNochNicht, ja: false },
           ].map((o) => (
             <button
               key={o.t}
@@ -196,18 +198,18 @@ export default function Course({ onSignal, onClose }: Props) {
 
   if (view.art === "check" && view.phase === "gruppe") {
     return (
-      <div className={kursKlasse} role="dialog" aria-label="Kennenlernen">
+      <div className={kursKlasse} role="dialog" aria-label={ui.ariaKennenlernen}>
         <div className="course-head">
-          <span>Noch eine Frage</span>
-          <button className="bubble-close" onClick={onClose} aria-label="Kurs schließen">
+          <span>{ui.nochEineFrage}</span>
+          <button className="bubble-close" onClick={onClose} aria-label={ui.kursSchliessen}>
             ✕
           </button>
         </div>
-        <p className="course-frage">{GRUPPEN_FRAGE}</p>
+        <p className="course-frage">{t(GRUPPEN_FRAGE)}</p>
         <div className="bubble-actions">
           {GRUPPEN_OPTIONEN.map((o) => (
             <button
-              key={o.t}
+              key={o.zg ?? "keine"}
               className="bubble-btn"
               onClick={() => {
                 speichern({ ...stand, zielgruppe: o.zg });
@@ -215,7 +217,7 @@ export default function Course({ onSignal, onClose }: Props) {
                 setView({ art: "liste" });
               }}
             >
-              {o.t}
+              {t(o.t)}
             </button>
           ))}
         </div>
@@ -227,14 +229,14 @@ export default function Course({ onSignal, onClose }: Props) {
     const fertig = KURS.filter((s) => stand.erledigt[s.id]).length;
     const alle = fertig === KURS.length;
     return (
-      <div className={kursKlasse} role="dialog" aria-label="Deine Lektionen">
+      <div className={kursKlasse} role="dialog" aria-label={ui.ariaLektionen}>
         <div className="course-head">
-          <span>Dein Kurs</span>
-          <button className="bubble-close" onClick={onClose} aria-label="Kurs schließen">
+          <span>{ui.deinKurs}</span>
+          <button className="bubble-close" onClick={onClose} aria-label={ui.kursSchliessen}>
             ✕
           </button>
         </div>
-        <div className="moehren" aria-label={`${fertig} von ${KURS.length} Lektionen geschafft`}>
+        <div className="moehren" aria-label={ui.lektionenGeschafft(fertig, KURS.length)}>
           {KURS.map((s) => (
             <span key={s.id} className={`moehre${stand.erledigt[s.id] ? " moehre--voll" : ""}`}>
               🥕
@@ -242,15 +244,13 @@ export default function Course({ onSignal, onClose }: Props) {
           ))}
         </div>
         {alle ? (
-          <p className="course-text">
-            Alles geschafft — dein ganzer Kurs! Jede Lektion kannst du jederzeit noch einmal machen.
-          </p>
+          <p className="course-text">{ui.allesGeschafft}</p>
         ) : (
           <button
             className="bubble-btn bubble-btn--primary"
             onClick={() => naechsteOffene && starteSzene(naechsteOffene)}
           >
-            Weiter: {naechsteOffene?.titel}
+            {ui.weiter}: {naechsteOffene && t(naechsteOffene.titel)}
           </button>
         )}
         <div className="course-liste">
@@ -260,7 +260,7 @@ export default function Course({ onSignal, onClose }: Props) {
                 {stand.erledigt[s.id] ? "✓" : "○"}
               </span>
               <span>
-                Akt {s.akt}: {s.titel}
+                {ui.akt} {s.akt}: {t(s.titel)}
               </span>
             </button>
           ))}
@@ -274,13 +274,13 @@ export default function Course({ onSignal, onClose }: Props) {
   const { szene } = view;
 
   return (
-    <div className={kursKlasse} role="dialog" aria-label={szene.titel}>
+    <div className={kursKlasse} role="dialog" aria-label={t(szene.titel)}>
       <div className="course-head">
-        <span>{szene.titel}</span>
+        <span>{t(szene.titel)}</span>
         <button
           className="bubble-close"
           onClick={() => setView({ art: "liste" })}
-          aria-label="Zurück zur Lektionsliste"
+          aria-label={ui.zurueckZurListe}
         >
           ✕
         </button>
@@ -291,10 +291,10 @@ export default function Course({ onSignal, onClose }: Props) {
           <p className="course-text">{t(schritt.text)}</p>
           <div className="bubble-actions">
             <button className="bubble-btn bubble-btn--primary" onClick={weiter}>
-              Weiter
+              {ui.weiter}
             </button>
             <button className="bubble-btn" onClick={() => szeneFertig(szene)}>
-              Kenn ich schon
+              {ui.kennIchSchon}
             </button>
           </div>
         </>
@@ -311,19 +311,19 @@ export default function Course({ onSignal, onClose }: Props) {
                 className="bubble-btn bubble-btn--primary"
                 onClick={() => führeAus(schritt.cmd, schritt.arg)}
               >
-                {schritt.knopf}
+                {t(schritt.knopf)}
               </button>
             )}
             {auftragLief && (
               <button className="bubble-btn bubble-btn--primary" onClick={weiter}>
-                Weiter
+                {ui.weiter}
               </button>
             )}
             <button
               className="bubble-btn"
               onClick={() => (auftragLief ? setView({ art: "liste" }) : weiter())}
             >
-              {auftragLief ? "Zur Lektionsliste" : "Später"}
+              {auftragLief ? ui.zurLektionsliste : ui.spaeter}
             </button>
           </div>
         </>
@@ -331,7 +331,7 @@ export default function Course({ onSignal, onClose }: Props) {
 
       {schritt.k === "pruef" && (
         <>
-          {pruefLage === "prueft" && <p className="course-text">Ich schaue kurz nach …</p>}
+          {pruefLage === "prueft" && <p className="course-text">{ui.schaueNach}</p>}
           {pruefLage === "schon" && <p className="course-text">{t(schritt.schonErledigtText)}</p>}
           {pruefLage === "erfolg" && <p className="course-text">{t(schritt.erfolgText)} 🎉</p>}
           {pruefLage === "warten" && <p className="course-text">{t(schritt.warteText)}</p>}
@@ -341,12 +341,12 @@ export default function Course({ onSignal, onClose }: Props) {
                 className="bubble-btn bubble-btn--primary"
                 onClick={() => führeAus(schritt.auftragCmd!, schritt.auftragArg!)}
               >
-                {schritt.auftragKnopf}
+                {t(schritt.auftragKnopf)}
               </button>
             )}
             {(pruefLage === "schon" || pruefLage === "erfolg") && (
               <button className="bubble-btn bubble-btn--primary" onClick={weiter}>
-                Weiter
+                {ui.weiter}
               </button>
             )}
             {pruefLage === "warten" && (
@@ -360,7 +360,7 @@ export default function Course({ onSignal, onClose }: Props) {
                     : weiter()
                 }
               >
-                Später weitermachen
+                {ui.spaeterWeitermachen}
               </button>
             )}
           </div>
@@ -371,9 +371,9 @@ export default function Course({ onSignal, onClose }: Props) {
         <>
           <p className="course-text">{t(schritt.text)}</p>
           <div className="bubble-actions">
-            {schritt.optionen.map((o) => (
+            {schritt.optionen.map((o, i) => (
               <button
-                key={o.t}
+                key={i}
                 className="bubble-btn"
                 onClick={() => {
                   if (o.ok) {
@@ -381,11 +381,11 @@ export default function Course({ onSignal, onClose }: Props) {
                     onSignal("freude");
                     weiter();
                   } else {
-                    setQuizHinweis(o.antwort ?? "Lass es uns anders probieren.");
+                    setQuizHinweis(o.antwort ? t(o.antwort) : ui.quizAusweich);
                   }
                 }}
               >
-                {o.t}
+                {t(o.t)}
               </button>
             ))}
           </div>
