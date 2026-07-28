@@ -91,12 +91,15 @@ export default function App() {
       const win = getCurrentWindow();
       const mon = await primaryMonitor();
       const sf = mon?.scaleFactor ?? 1;
-      await win.setSize(new PhysicalSize(Math.round(breite * sf), Math.round(hoehe * sf)));
+      const w = Math.round(breite * sf);
+      const h = Math.round(hoehe * sf);
+      await win.setSize(new PhysicalSize(w, h));
       if (mon) {
+        // Klammerung mit der ANGEFORDERTEN Größe rechnen — outerSize() ist
+        // direkt nach setSize() noch alt (WM bestätigt asynchron).
         const pos = await win.outerPosition();
-        const size = await win.outerSize();
-        const maxX = mon.position.x + mon.size.width - size.width - 8;
-        const maxY = mon.position.y + mon.size.height - size.height - 8;
+        const maxX = mon.position.x + mon.size.width - w - 8;
+        const maxY = mon.position.y + mon.size.height - h - 8;
         await win.setPosition(
           new PhysicalPosition(
             Math.min(Math.max(pos.x, mon.position.x + 8), maxX),
@@ -132,19 +135,24 @@ export default function App() {
   /* --- Tray-Ereignisse (Rust-Seite). -------------------------------------- */
   useEffect(() => {
     const unlisten: Array<() => void> = [];
+    let tot = false; // Cleanup vor Promise-Auflösung (StrictMode/HMR) abfangen
+    const merke = (u: () => void) => (tot ? u() : unlisten.push(u));
     listen("niemand://rufen", () => {
       wake();
       setState("waving");
       setTimeout(() => setState((s) => (s === "waving" ? "idle" : s)), 2600);
-    }).then((u) => unlisten.push(u));
+    }).then(merke);
     listen("niemand://schlafen", () => {
       walkAbort.current = true;
       setBubble("closed");
       setKurs(false);
       setzeFenster(FENSTER.normalB, FENSTER.normalH);
       setState("sleeping");
-    }).then((u) => unlisten.push(u));
-    return () => unlisten.forEach((u) => u());
+    }).then(merke);
+    return () => {
+      tot = true;
+      unlisten.forEach((u) => u());
+    };
   }, [wake, setzeFenster]);
 
   /* --- Fenster sanft zu einer Zielposition bewegen (Hüpf-Etappen). -------- */
@@ -260,6 +268,7 @@ export default function App() {
 
   /* Gefühls-Signale aus dem Kurs → Tierchen-Zustände. */
   const onKursSignal = useCallback((s: PetSignal) => {
+    if (!kursRef.current) return; // Nachzügler-Signal nach Kurs-Schließen verwerfen
     if (demoTimer.current) clearTimeout(demoTimer.current);
     if (s === "denken") setState("thinking");
     else if (s === "zeigen") {
@@ -307,6 +316,7 @@ export default function App() {
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (kursRef.current) return; // im Kurs schließt die Kurskarte selbst
         setBubble("closed");
         setState((s) => (s === "talking" || s === "pointing" ? "idle" : s));
       }

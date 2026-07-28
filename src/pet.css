@@ -515,6 +515,15 @@
   font-weight: 700;
   width: 20px;
 }
+/* Ruhestand-Zielgruppe: eine Stufe größere Schrift im ganzen Kurs */
+.course--senior {
+  font-size: 20px;
+}
+.course--senior .bubble-btn {
+  font-size: 20px;
+  min-height: 56px;
+}
+
 /* Kurs-Modus: Hase rückt klein nach unten rechts */
 .stage--kurs .nobody-svg {
   width: 96px;

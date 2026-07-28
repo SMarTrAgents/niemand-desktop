@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   CHECK_FRAGEN,
+  GRUPPEN_FRAGE,
+  GRUPPEN_OPTIONEN,
   KURS,
   KursStand,
   Schritt,
@@ -9,6 +11,7 @@ import {
   ladeStand,
   levelAusAntworten,
   speichereStand,
+  textFuer,
   vorabErledigt,
 } from "./course";
 
@@ -20,18 +23,27 @@ interface Props {
   onClose: () => void;
 }
 
-type View = { art: "check" } | { art: "liste" } | { art: "szene"; szene: Szene; schritt: number };
+type View =
+  | { art: "check"; phase: "wissen" | "gruppe" }
+  | { art: "liste" }
+  | { art: "szene"; szene: Szene; schritt: number };
 
 export default function Course({ onSignal, onClose }: Props) {
   const [stand, setStand] = useState<KursStand>(() => ladeStand());
-  const [view, setView] = useState<View>(() =>
-    ladeStand().level === null ? { art: "check" } : { art: "liste" },
-  );
+  const [view, setView] = useState<View>(() => {
+    const s = ladeStand();
+    if (s.level === null) return { art: "check", phase: "wissen" };
+    if (s.zielgruppe === undefined) return { art: "check", phase: "gruppe" };
+    return { art: "liste" };
+  });
   const [checkNr, setCheckNr] = useState(0);
   const jaCount = useRef(0);
   const [quizHinweis, setQuizHinweis] = useState<string | null>(null);
   const [pruefLage, setPruefLage] = useState<"prueft" | "warten" | "erfolg" | "schon">("prueft");
-  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const zg = stand.zielgruppe ?? null;
+  const t = useCallback((x: Parameters<typeof textFuer>[0]) => textFuer(x, zg), [zg]);
 
   const speichern = useCallback((s: KursStand) => {
     setStand(s);
@@ -41,18 +53,20 @@ export default function Course({ onSignal, onClose }: Props) {
   /* --- Prüf-Schritte: still nachsehen, Erfolg erkennen. ------------------- */
   const stoppePoll = useCallback(() => {
     if (pollTimer.current) {
-      clearInterval(pollTimer.current);
+      clearTimeout(pollTimer.current);
       pollTimer.current = null;
     }
   }, []);
 
-  const pruefe = useCallback(async (check: "online" | "drucker"): Promise<boolean> => {
+  const pruefe = useCallback(async (check: "online" | "drucker"): Promise<"ok" | "nein" | "fehlt"> => {
     try {
-      if (check === "online") return await invoke<boolean>("check_online");
+      if (check === "online") return (await invoke<boolean>("check_online")) ? "ok" : "nein";
       const drucker = await invoke<string[]>("check_printer");
-      return drucker.length > 0;
-    } catch {
-      return false;
+      return drucker.length > 0 ? "ok" : "nein";
+    } catch (e) {
+      // „werkzeug-fehlt“ = dieses System kann den Schritt nie bestehen
+      // (z. B. kein lpstat) → Kurs überspringt statt endlos zu warten.
+      return String(e).includes("werkzeug-fehlt") ? "fehlt" : "nein";
     }
   }, []);
 
@@ -66,25 +80,27 @@ export default function Course({ onSignal, onClose }: Props) {
     let aktiv = true;
     setPruefLage("prueft");
     onSignal("denken");
-    (async () => {
-      const ok = await pruefe(schritt.check);
+    // Timeout-KETTE statt Interval: der nächste Check startet erst, wenn der
+    // vorherige fertig ist — keine Stapel-Checks, kein Signal nach Schließen.
+    const tick = async (erster: boolean) => {
+      const lage = await pruefe(schritt.check);
       if (!aktiv) return;
-      if (ok) {
-        setPruefLage("schon");
+      if (lage === "ok") {
+        setPruefLage(erster ? "schon" : "erfolg");
         onSignal("freude");
         return;
       }
-      setPruefLage("warten");
-      onSignal("ruhe");
-      pollTimer.current = setInterval(async () => {
-        const jetzt = await pruefe(schritt.check);
-        if (jetzt) {
-          stoppePoll();
-          setPruefLage("erfolg");
-          onSignal("freude");
-        }
-      }, 3000);
-    })();
+      if (lage === "fehlt") {
+        weiter();
+        return;
+      }
+      if (erster) {
+        setPruefLage("warten");
+        onSignal("ruhe");
+      }
+      pollTimer.current = setTimeout(() => tick(false), 3000);
+    };
+    tick(true);
     return () => {
       aktiv = false;
       stoppePoll();
@@ -119,6 +135,7 @@ export default function Course({ onSignal, onClose }: Props) {
   };
 
   const naechsteOffene = KURS.find((s) => !stand.erledigt[s.id]);
+  const kursKlasse = `course${zg === "senior" ? " course--senior" : ""}`;
 
   /* --- AUFTRAG-Karte ausführen (nur per Klick). ---------------------------- */
   const [auftragLief, setAuftragLief] = useState(false);
@@ -135,9 +152,9 @@ export default function Course({ onSignal, onClose }: Props) {
 
   /* ======================= Ansichten ======================= */
 
-  if (view.art === "check") {
+  if (view.art === "check" && view.phase === "wissen") {
     return (
-      <div className="course" role="dialog" aria-label="Kenntnis-Check">
+      <div className={kursKlasse} role="dialog" aria-label="Kennenlernen">
         <div className="course-head">
           <span>Erst mal kennenlernen</span>
           <button className="bubble-close" onClick={onClose} aria-label="Kurs schließen">
@@ -145,7 +162,7 @@ export default function Course({ onSignal, onClose }: Props) {
           </button>
         </div>
         <p className="course-text">
-          Drei kurze Fragen — es gibt keine falschen Antworten. So weiß ich, wo wir anfangen.
+          Ein paar kurze Fragen — es gibt keine falschen Antworten. So weiß ich, wo wir anfangen.
         </p>
         <p className="course-frage">{CHECK_FRAGEN[checkNr]}</p>
         <div className="bubble-actions">
@@ -164,10 +181,38 @@ export default function Course({ onSignal, onClose }: Props) {
                   const level = levelAusAntworten(jaCount.current);
                   const erledigt: Record<string, boolean> = {};
                   for (const id of vorabErledigt(level)) erledigt[id] = true;
-                  speichern({ level, erledigt });
-                  onSignal("freude");
-                  setView({ art: "liste" });
+                  speichern({ ...stand, level, erledigt });
+                  setView({ art: "check", phase: "gruppe" });
                 }
+              }}
+            >
+              {o.t}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (view.art === "check" && view.phase === "gruppe") {
+    return (
+      <div className={kursKlasse} role="dialog" aria-label="Kennenlernen">
+        <div className="course-head">
+          <span>Noch eine Frage</span>
+          <button className="bubble-close" onClick={onClose} aria-label="Kurs schließen">
+            ✕
+          </button>
+        </div>
+        <p className="course-frage">{GRUPPEN_FRAGE}</p>
+        <div className="bubble-actions">
+          {GRUPPEN_OPTIONEN.map((o) => (
+            <button
+              key={o.t}
+              className="bubble-btn"
+              onClick={() => {
+                speichern({ ...stand, zielgruppe: o.zg });
+                onSignal("freude");
+                setView({ art: "liste" });
               }}
             >
               {o.t}
@@ -182,7 +227,7 @@ export default function Course({ onSignal, onClose }: Props) {
     const fertig = KURS.filter((s) => stand.erledigt[s.id]).length;
     const alle = fertig === KURS.length;
     return (
-      <div className="course" role="dialog" aria-label="Deine Lektionen">
+      <div className={kursKlasse} role="dialog" aria-label="Deine Lektionen">
         <div className="course-head">
           <span>Dein Kurs</span>
           <button className="bubble-close" onClick={onClose} aria-label="Kurs schließen">
@@ -225,11 +270,11 @@ export default function Course({ onSignal, onClose }: Props) {
   }
 
   /* --- Szene spielen. ------------------------------------------------------ */
+  if (view.art !== "szene" || !schritt) return null;
   const { szene } = view;
-  if (!schritt) return null;
 
   return (
-    <div className="course" role="dialog" aria-label={szene.titel}>
+    <div className={kursKlasse} role="dialog" aria-label={szene.titel}>
       <div className="course-head">
         <span>{szene.titel}</span>
         <button
@@ -243,7 +288,7 @@ export default function Course({ onSignal, onClose }: Props) {
 
       {schritt.k === "sag" && (
         <>
-          <p className="course-text">{schritt.text}</p>
+          <p className="course-text">{t(schritt.text)}</p>
           <div className="bubble-actions">
             <button className="bubble-btn bubble-btn--primary" onClick={weiter}>
               Weiter
@@ -257,7 +302,9 @@ export default function Course({ onSignal, onClose }: Props) {
 
       {schritt.k === "auftrag" && (
         <>
-          <p className="course-text">{auftragLief && schritt.danach ? schritt.danach : schritt.text}</p>
+          <p className="course-text">
+            {auftragLief && schritt.danach ? t(schritt.danach) : t(schritt.text)}
+          </p>
           <div className="bubble-actions">
             {!auftragLief && (
               <button
@@ -272,7 +319,10 @@ export default function Course({ onSignal, onClose }: Props) {
                 Weiter
               </button>
             )}
-            <button className="bubble-btn" onClick={weiter}>
+            <button
+              className="bubble-btn"
+              onClick={() => (auftragLief ? setView({ art: "liste" }) : weiter())}
+            >
               {auftragLief ? "Zur Lektionsliste" : "Später"}
             </button>
           </div>
@@ -282,9 +332,9 @@ export default function Course({ onSignal, onClose }: Props) {
       {schritt.k === "pruef" && (
         <>
           {pruefLage === "prueft" && <p className="course-text">Ich schaue kurz nach …</p>}
-          {pruefLage === "schon" && <p className="course-text">{schritt.schonErledigtText}</p>}
-          {pruefLage === "erfolg" && <p className="course-text">{schritt.erfolgText} 🎉</p>}
-          {pruefLage === "warten" && <p className="course-text">{schritt.warteText}</p>}
+          {pruefLage === "schon" && <p className="course-text">{t(schritt.schonErledigtText)}</p>}
+          {pruefLage === "erfolg" && <p className="course-text">{t(schritt.erfolgText)} 🎉</p>}
+          {pruefLage === "warten" && <p className="course-text">{t(schritt.warteText)}</p>}
           <div className="bubble-actions">
             {pruefLage === "warten" && schritt.auftragKnopf && (
               <button
@@ -300,7 +350,16 @@ export default function Course({ onSignal, onClose }: Props) {
               </button>
             )}
             {pruefLage === "warten" && (
-              <button className="bubble-btn" onClick={weiter}>
+              <button
+                className="bubble-btn"
+                onClick={() =>
+                  // Letzter Schritt der Szene: zurück zur Liste OHNE die
+                  // Möhre zu füllen — „Später“ ist kein Erfolg.
+                  view.schritt + 1 >= view.szene.schritte.length
+                    ? setView({ art: "liste" })
+                    : weiter()
+                }
+              >
                 Später weitermachen
               </button>
             )}
@@ -310,7 +369,7 @@ export default function Course({ onSignal, onClose }: Props) {
 
       {schritt.k === "frage" && (
         <>
-          <p className="course-text">{schritt.text}</p>
+          <p className="course-text">{t(schritt.text)}</p>
           <div className="bubble-actions">
             {schritt.optionen.map((o) => (
               <button

@@ -4,6 +4,19 @@ use tauri::{
     Emitter, Manager,
 };
 
+/// Prozess-Start ohne Konsolenfenster — auf Windows blitzt sonst bei jedem
+/// Aufruf ein schwarzes Fenster auf (Gegenprüfungs-Blocker 28.07.).
+fn befehl(prog: &str) -> std::process::Command {
+    #[allow(unused_mut)]
+    let mut c = std::process::Command::new(prog);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        c.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    }
+    c
+}
+
 /// Sauberes Beenden aus der Oberfläche (Sprechblasen-Knopf).
 #[tauri::command]
 fn quit_app(app: tauri::AppHandle) {
@@ -13,93 +26,139 @@ fn quit_app(app: tauri::AppHandle) {
 /// Öffnet eine System-Einstellungsseite per Deep-Link — NUR aus der festen
 /// Ziel-Liste, nie aus freien Strings (Playbook-Regel, Plan § 8.4). Wird
 /// ausschließlich durch einen Nutzer-Klick auf eine AUFTRAG-Karte ausgelöst.
+/// Async, damit nichts den UI-Thread blockiert.
 #[tauri::command]
-fn open_settings(panel: String) -> Result<(), String> {
+async fn open_settings(panel: String) -> Result<(), String> {
     #[cfg(target_os = "linux")]
-    let cmd: Vec<&str> = match panel.as_str() {
-        "sound" => vec!["gnome-control-center", "sound"],
-        "wifi" => vec!["gnome-control-center", "wifi"],
-        "printers" => vec!["gnome-control-center", "printers"],
-        "system" => vec!["gnome-control-center"],
-        _ => return Err("unbekanntes Ziel".into()),
-    };
+    {
+        let gnome_arg: Option<&str> = match panel.as_str() {
+            "sound" => Some("sound"),
+            "wifi" => Some("wifi"),
+            "printers" => Some("printers"),
+            "system" => None,
+            _ => return Err("unbekanntes Ziel".into()),
+        };
+        // Fallback-Kette: GNOME → KDE → XFCE (Gegenprüfung: nicht jedes
+        // Linux hat gnome-control-center).
+        let versuche: Vec<(&str, Vec<&str>)> = vec![
+            (
+                "gnome-control-center",
+                gnome_arg.map(|a| vec![a]).unwrap_or_default(),
+            ),
+            ("systemsettings", vec![]),
+            ("xfce4-settings-manager", vec![]),
+        ];
+        for (prog, args) in versuche {
+            match befehl(prog).args(&args).spawn() {
+                Ok(_) => return Ok(()),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+                Err(e) => return Err(e.to_string()),
+            }
+        }
+        Err("werkzeug-fehlt".into())
+    }
     #[cfg(target_os = "windows")]
-    let cmd: Vec<&str> = match panel.as_str() {
-        "sound" => vec!["cmd", "/C", "start", "ms-settings:sound"],
-        "wifi" => vec!["cmd", "/C", "start", "ms-settings:network-wifi"],
-        "printers" => vec!["cmd", "/C", "start", "ms-settings:printers"],
-        "system" => vec!["cmd", "/C", "start", "ms-settings:"],
-        _ => return Err("unbekanntes Ziel".into()),
-    };
+    {
+        let uri = match panel.as_str() {
+            "sound" => "ms-settings:sound",
+            "wifi" => "ms-settings:network-wifi",
+            "printers" => "ms-settings:printers",
+            "system" => "ms-settings:",
+            _ => return Err("unbekanntes Ziel".into()),
+        };
+        befehl("explorer.exe")
+            .arg(uri)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
     #[cfg(target_os = "macos")]
-    let cmd: Vec<&str> = match panel.as_str() {
-        "sound" => vec!["open", "x-apple.systempreferences:com.apple.Sound-Settings.extension"],
-        "wifi" => vec!["open", "x-apple.systempreferences:com.apple.wifi-settings-extension"],
-        "printers" => vec!["open", "x-apple.systempreferences:com.apple.Print-Scan-Settings.extension"],
-        "system" => vec!["open", "x-apple.systempreferences:"],
-        _ => return Err("unbekanntes Ziel".into()),
-    };
-    std::process::Command::new(cmd[0])
-        .args(&cmd[1..])
-        .spawn()
-        .map_err(|e| e.to_string())?;
-    Ok(())
+    {
+        let uri = match panel.as_str() {
+            "sound" => "x-apple.systempreferences:com.apple.Sound-Settings.extension",
+            "wifi" => "x-apple.systempreferences:com.apple.wifi-settings-extension",
+            "printers" => "x-apple.systempreferences:com.apple.Print-Scan-Settings.extension",
+            "system" => "x-apple.systempreferences:",
+            _ => return Err("unbekanntes Ziel".into()),
+        };
+        befehl("open").arg(uri).spawn().map_err(|e| e.to_string())?;
+        Ok(())
+    }
 }
 
 /// Internet da? App-eigene Wahrheit: kommen wir zu unserer Cloud durch?
 /// (Plan § 4: Konnektivität statt SSID — keine Location-Berechtigung nötig.)
+/// Async: DNS + TCP-Timeout dürfen den UI-Thread nie einfrieren.
 #[tauri::command]
-fn check_online() -> bool {
-    use std::net::{TcpStream, ToSocketAddrs};
-    use std::time::Duration;
-    if let Ok(mut addrs) = "cloud.smartragents.ai:443".to_socket_addrs() {
-        if let Some(addr) = addrs.next() {
-            return TcpStream::connect_timeout(&addr, Duration::from_secs(3)).is_ok();
+async fn check_online() -> bool {
+    tauri::async_runtime::spawn_blocking(|| {
+        use std::net::{TcpStream, ToSocketAddrs};
+        use std::time::Duration;
+        if let Ok(mut addrs) = "cloud.smartragents.ai:443".to_socket_addrs() {
+            if let Some(addr) = addrs.next() {
+                return TcpStream::connect_timeout(&addr, Duration::from_secs(3)).is_ok();
+            }
         }
-    }
-    false
+        false
+    })
+    .await
+    .unwrap_or(false)
 }
 
 /// Eingerichtete Drucker auflisten — ohne Adminrechte, ohne Prompts
 /// (lpstat auf Linux/macOS, Get-Printer auf Windows; Plan § 4 Akt 1.4).
+/// „werkzeug-fehlt“ = lpstat existiert nicht (Minimal-System) — der Kurs
+/// überspringt den Schritt dann, statt endlos zu warten.
 #[tauri::command]
-fn check_printer() -> Result<Vec<String>, String> {
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
-    {
-        let out = std::process::Command::new("lpstat")
-            .arg("-p")
-            .output()
-            .map_err(|e| e.to_string())?;
-        let s = String::from_utf8_lossy(&out.stdout);
-        // lpstat spricht je nach Systemsprache "printer X …" oder "Drucker X …"
-        Ok(s
-            .lines()
-            .filter_map(|l| {
-                l.strip_prefix("printer ")
-                    .or_else(|| l.strip_prefix("Drucker "))
-                    .and_then(|r| r.split_whitespace().next())
-                    .map(|n| n.to_string())
-            })
-            .collect())
-    }
-    #[cfg(target_os = "windows")]
-    {
-        let out = std::process::Command::new("powershell")
-            .args(["-NoProfile", "-Command", "(Get-Printer).Name"])
-            .output()
-            .map_err(|e| e.to_string())?;
-        let s = String::from_utf8_lossy(&out.stdout);
-        Ok(s.lines()
-            .map(|l| l.trim().to_string())
-            .filter(|l| !l.is_empty())
-            .collect())
-    }
+async fn check_printer() -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
+        {
+            let out = befehl("lpstat")
+                .arg("-p")
+                // sprachneutral erzwingen: immer "printer X …", nie
+                // "imprimante/impresora/…" (Gegenprüfungs-Befund)
+                .env("LC_ALL", "C")
+                .env("LANG", "C")
+                .output()
+                .map_err(|e| {
+                    if e.kind() == std::io::ErrorKind::NotFound {
+                        "werkzeug-fehlt".to_string()
+                    } else {
+                        e.to_string()
+                    }
+                })?;
+            let s = String::from_utf8_lossy(&out.stdout);
+            Ok(s.lines()
+                .filter_map(|l| {
+                    l.strip_prefix("printer ")
+                        .or_else(|| l.strip_prefix("Drucker "))
+                        .and_then(|r| r.split_whitespace().next())
+                        .map(|n| n.to_string())
+                })
+                .collect())
+        }
+        #[cfg(target_os = "windows")]
+        {
+            let out = befehl("powershell")
+                .args(["-NoProfile", "-Command", "(Get-Printer).Name"])
+                .output()
+                .map_err(|e| e.to_string())?;
+            let s = String::from_utf8_lossy(&out.stdout);
+            Ok(s.lines()
+                .map(|l| l.trim().to_string())
+                .filter(|l| !l.is_empty())
+                .collect())
+        }
+    })
+    .await
+    .unwrap_or_else(|e| Err(e.to_string()))
 }
 
 /// Öffnet eine Web-Adresse im Standard-Browser — NUR aus der festen
 /// Ziel-Liste (Playbook-Regel), nie freie URLs.
 #[tauri::command]
-fn open_url(target: String) -> Result<(), String> {
+async fn open_url(target: String) -> Result<(), String> {
     let url = match target.as_str() {
         "cloud" => "https://cloud.smartragents.ai",
         "homepage" => "https://smartragents.ai",
@@ -111,10 +170,7 @@ fn open_url(target: String) -> Result<(), String> {
     let c: (&str, Vec<&str>) = ("cmd", vec!["/C", "start", "", url]);
     #[cfg(target_os = "macos")]
     let c: (&str, Vec<&str>) = ("open", vec![url]);
-    std::process::Command::new(c.0)
-        .args(&c.1)
-        .spawn()
-        .map_err(|e| e.to_string())?;
+    befehl(c.0).args(&c.1).spawn().map_err(|e| e.to_string())?;
     Ok(())
 }
 
