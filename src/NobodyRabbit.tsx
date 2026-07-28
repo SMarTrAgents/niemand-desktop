@@ -43,6 +43,19 @@ export default function NobodyRabbitSvg({ className, title }: Props) {
         <text x="78" y="26" fontSize="12">Z</text>
         <text x="88" y="17" fontSize="15">Z</text>
       </g>
+      {/* Zahlen (nur im Zustand "calc" sichtbar — Niemand rechnet) */}
+      <g className="nobody-calc" aria-hidden="true" fill="#00d4ff" fontFamily="system-ui, sans-serif" fontWeight="700">
+        <text x="67" y="35" fontSize="9">1</text>
+        <text x="75" y="27" fontSize="11">2</text>
+        <text x="84" y="18" fontSize="13">3</text>
+      </g>
+      {/* Herz (nur im Zustand "heart" sichtbar — z. B. beim Aufwecken) */}
+      <g className="nobody-heart" aria-hidden="true">
+        <path
+          d="M82 22 c-3 -4 -9 -3 -9 2 c0 4 5 7 9 10 c4 -3 9 -6 9 -10 c0 -5 -6 -6 -9 -2 z"
+          fill="#ff7d9e"
+        />
+      </g>
     </svg>
   );
 }

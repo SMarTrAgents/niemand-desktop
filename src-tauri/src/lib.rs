@@ -10,6 +10,42 @@ fn quit_app(app: tauri::AppHandle) {
     app.exit(0);
 }
 
+/// Öffnet eine System-Einstellungsseite per Deep-Link — NUR aus der festen
+/// Ziel-Liste, nie aus freien Strings (Playbook-Regel, Plan § 8.4). Wird
+/// ausschließlich durch einen Nutzer-Klick auf eine AUFTRAG-Karte ausgelöst.
+#[tauri::command]
+fn open_settings(panel: String) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    let cmd: Vec<&str> = match panel.as_str() {
+        "sound" => vec!["gnome-control-center", "sound"],
+        "wifi" => vec!["gnome-control-center", "wifi"],
+        "printers" => vec!["gnome-control-center", "printers"],
+        "system" => vec!["gnome-control-center"],
+        _ => return Err("unbekanntes Ziel".into()),
+    };
+    #[cfg(target_os = "windows")]
+    let cmd: Vec<&str> = match panel.as_str() {
+        "sound" => vec!["cmd", "/C", "start", "ms-settings:sound"],
+        "wifi" => vec!["cmd", "/C", "start", "ms-settings:network-wifi"],
+        "printers" => vec!["cmd", "/C", "start", "ms-settings:printers"],
+        "system" => vec!["cmd", "/C", "start", "ms-settings:"],
+        _ => return Err("unbekanntes Ziel".into()),
+    };
+    #[cfg(target_os = "macos")]
+    let cmd: Vec<&str> = match panel.as_str() {
+        "sound" => vec!["open", "x-apple.systempreferences:com.apple.Sound-Settings.extension"],
+        "wifi" => vec!["open", "x-apple.systempreferences:com.apple.wifi-settings-extension"],
+        "printers" => vec!["open", "x-apple.systempreferences:com.apple.Print-Scan-Settings.extension"],
+        "system" => vec!["open", "x-apple.systempreferences:"],
+        _ => return Err("unbekanntes Ziel".into()),
+    };
+    std::process::Command::new(cmd[0])
+        .args(&cmd[1..])
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 pub fn run() {
     tauri::Builder::default()
         // Zweiter Doppelklick aufs Icon erzeugt keinen zweiten Hasen,
@@ -21,7 +57,7 @@ pub fn run() {
             }
             let _ = app.emit("niemand://rufen", ());
         }))
-        .invoke_handler(tauri::generate_handler![quit_app])
+        .invoke_handler(tauri::generate_handler![quit_app, open_settings])
         .setup(|app| {
             // Tray = Rettungsanker, falls der Hase mal außer Sicht ist (Plan § 3).
             let rufen = MenuItem::with_id(app, "rufen", "Niemand rufen", true, None::<&str>)?;

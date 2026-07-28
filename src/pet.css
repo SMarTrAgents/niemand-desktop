@@ -59,7 +59,9 @@
 }
 
 .nobody-think,
-.nobody-zzz {
+.nobody-zzz,
+.nobody-calc,
+.nobody-heart {
   opacity: 0;
   transition: opacity 0.25s ease;
 }
@@ -83,6 +85,48 @@
 /* Zustands-Sichtbarkeiten (auch ohne Motion) */
 .nobody--thinking .nobody-think {
   opacity: 1;
+}
+.nobody--calc .nobody-calc {
+  opacity: 1;
+}
+.nobody--heart .nobody-heart {
+  opacity: 1;
+}
+/* Getragen werden: große Augen, leichtes Baumeln an den Ohren */
+.nobody--carried .nobody-eye {
+  transform: scale(1.3);
+}
+
+/* Zeigen: Arm streckt sich (Posen 1:1 aus dem Cloud-Widget); bei
+   reduced-motion übernimmt der statische Pfeil. */
+.nobody--pointing .nobody-arm {
+  transition: transform 0.3s ease;
+}
+.nobody--point-left .nobody-arm {
+  transform: rotate(4deg) scale(1.18);
+}
+.nobody--point-up .nobody-arm {
+  transform: rotate(56deg) scale(1.18);
+}
+.nobody--point-down .nobody-arm {
+  transform: rotate(-52deg) scale(1.15);
+}
+.nobody-arrow {
+  display: none;
+  position: absolute;
+  color: var(--cyan);
+  font-size: 30px;
+  line-height: 1;
+}
+.nobody-arrow--up {
+  top: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .nobody--pointing .nobody-arrow {
+    display: inline-flex;
+  }
 }
 .nobody--sleeping .nobody-zzz {
   opacity: 1;
@@ -160,6 +204,35 @@
   .nobody--attention .nobody-arm {
     animation: nobody-wave 1.4s ease-in-out infinite;
   }
+  /* Rechnen: konzentriertes Nicken + Zahlen ticken, Pfote zählt mit */
+  .nobody--calc .nobody-svg {
+    animation: nobody-count 1.2s ease-in-out infinite;
+    transform-origin: 49px 90px;
+  }
+  .nobody--calc .nobody-calc {
+    animation: nobody-think-dots 1.2s ease-in-out infinite;
+  }
+  .nobody--calc .nobody-arm {
+    animation: nobody-tap 0.6s ease-in-out infinite;
+  }
+  /* Herz: kurzes Aufploppen */
+  .nobody--heart .nobody-heart {
+    animation: nobody-heart-pop 1.4s ease-out 1;
+    transform-box: view-box;
+    transform-origin: 82px 26px;
+  }
+  .nobody--heart .nobody-svg {
+    animation: nobody-bob 1.4s ease-in-out 1;
+  }
+  /* Getragen: baumelt leicht an den Ohren */
+  .nobody--carried .nobody-svg {
+    animation: nobody-sway 0.6s ease-in-out infinite;
+    transform-origin: 49px 8px;
+  }
+  /* Zeigen: aufmerksames Aufrichten */
+  .nobody--pointing .nobody-svg {
+    animation: nobody-bob 2.2s ease-in-out infinite;
+  }
 }
 
 @keyframes nobody-wink {
@@ -220,6 +293,25 @@
 @keyframes nobody-pulse {
   0%, 100% { transform: scale(0.96); opacity: 0.5; }
   50% { transform: scale(1.04); opacity: 0.95; }
+}
+@keyframes nobody-count {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+@keyframes nobody-tap {
+  0%, 100% { transform: rotate(-12deg); }
+  50% { transform: rotate(14deg); }
+}
+@keyframes nobody-heart-pop {
+  0% { transform: scale(0); opacity: 0; }
+  30% { transform: scale(1.3); opacity: 1; }
+  60% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+@keyframes nobody-sway {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
 }
 
 /* --- Konfetti (nur celebrate, exakt sparsam) ------------------------------ */
@@ -309,6 +401,12 @@
 .bubble-actions {
   display: grid;
   gap: 8px;
+}
+.bubble-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 .bubble-btn {
   display: block;
