@@ -1,0 +1,331 @@
+/* ---------------------------------------------------------------------------
+   Niemand als Desktop-Tierchen.
+   Animations-Grundstock 1:1 aus dem Cloud-Frontend (Golden-Ticket-Stil),
+   ergänzt um: walking, sleeping, celebrating, attention.
+   Regeln (Plan § 3/§ 9): nur transform/opacity animieren, reduced-motion
+   respektieren, keine Töne. */
+
+:root {
+  --cyan: #00d4ff;
+  --ink: #0a0e14;
+  --card: #0f1620;
+  --line: #24303f;
+  --text: #eaf4f8;
+}
+
+.stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  background: transparent;
+}
+
+/* --- Hase ----------------------------------------------------------------- */
+
+.nobody {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+.nobody:focus-visible {
+  outline: 3px solid var(--cyan);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+.nobody-svg {
+  width: 150px;
+  height: auto;
+  filter: drop-shadow(0 6px 18px rgba(0, 212, 255, 0.18));
+}
+.nobody--flip .nobody-svg {
+  transform: scaleX(-1);
+}
+
+/* Zieh-Griff: die Ohren. Der Körper öffnet die Sprechblase. */
+.nobody-drag {
+  position: absolute;
+  top: 0;
+  left: 20%;
+  width: 60%;
+  height: 34%;
+  cursor: grab;
+}
+
+.nobody-think,
+.nobody-zzz {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.nobody-eye {
+  transform-box: view-box;
+  transform-origin: center;
+}
+.nobody-nose {
+  transform-box: view-box;
+  transform-origin: 49px 53.5px;
+}
+.nobody-arm {
+  transform-origin: 38px 68px;
+  transform-box: view-box;
+}
+.nobody-ear {
+  transform-origin: 40px 40px;
+  transform-box: view-box;
+}
+
+/* Zustands-Sichtbarkeiten (auch ohne Motion) */
+.nobody--thinking .nobody-think {
+  opacity: 1;
+}
+.nobody--sleeping .nobody-zzz {
+  opacity: 1;
+}
+.nobody--sleeping .nobody-eye {
+  transform: scaleY(0.12);
+}
+.nobody--sleeping .nobody-svg {
+  filter: drop-shadow(0 4px 10px rgba(0, 212, 255, 0.08)) saturate(0.8);
+}
+
+/* Aufmerksamkeit: dezenter Cyan-Puls-Ring (ersetzt jede Unterbrechung). */
+.nobody-ring {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 3px solid var(--cyan);
+  opacity: 0;
+  pointer-events: none;
+}
+.nobody--attention .nobody-ring {
+  opacity: 0.9;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nobody--idle .nobody-svg {
+    animation: nobody-hop 2.8s ease-in-out infinite;
+  }
+  .nobody--talking .nobody-svg {
+    animation: nobody-bob 1.5s ease-in-out infinite;
+  }
+  .nobody--idle .nobody-eye--l {
+    animation: nobody-wink 5.5s ease-in-out infinite;
+  }
+  .nobody--idle .nobody-nose {
+    animation: nobody-nose 6.5s ease-in-out infinite;
+  }
+  .nobody--thinking .nobody-svg {
+    animation: nobody-think-tilt 2.4s ease-in-out infinite;
+    transform-origin: 49px 90px;
+  }
+  .nobody--thinking .nobody-think {
+    animation: nobody-think-dots 1.5s ease-in-out infinite;
+  }
+  .nobody--idle .nobody-ear,
+  .nobody--waving .nobody-ear,
+  .nobody--talking .nobody-ear {
+    animation: nobody-ear 4s ease-in-out infinite;
+  }
+  .nobody--waving .nobody-arm {
+    animation: nobody-wave 1.1s ease-in-out infinite;
+  }
+  /* Hoppeln: schneller Hüpfer, synchron zum Fensterversatz */
+  .nobody--walking .nobody-svg {
+    animation: nobody-walk 0.36s ease-in-out infinite;
+  }
+  .nobody--walking.nobody--flip .nobody-svg {
+    animation: nobody-walk-flip 0.36s ease-in-out infinite;
+  }
+  .nobody--sleeping .nobody-svg {
+    animation: nobody-breathe 4s ease-in-out infinite;
+  }
+  .nobody--sleeping .nobody-zzz {
+    animation: nobody-think-dots 3s ease-in-out infinite;
+  }
+  .nobody--celebrating .nobody-svg {
+    animation: nobody-celebrate 0.55s ease-in-out 3;
+  }
+  .nobody--celebrating .nobody-arm {
+    animation: nobody-wave 0.55s ease-in-out 3;
+  }
+  .nobody--attention .nobody-ring {
+    animation: nobody-pulse 1.6s ease-in-out infinite;
+  }
+  .nobody--attention .nobody-arm {
+    animation: nobody-wave 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes nobody-wink {
+  0%, 82%, 100% { transform: scaleY(1); }
+  86%, 90% { transform: scaleY(0.12); }
+}
+@keyframes nobody-nose {
+  0%, 70%, 100% { transform: scale(1); }
+  76% { transform: scale(1.35, 0.7); }
+  82% { transform: scale(0.9, 1.2); }
+  88% { transform: scale(1); }
+}
+@keyframes nobody-think-tilt {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-6deg); }
+}
+@keyframes nobody-think-dots {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+@keyframes nobody-hop {
+  0%, 100% { transform: translateY(0); }
+  12% { transform: translateY(-7px); }
+  24% { transform: translateY(0); }
+}
+@keyframes nobody-walk {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  30% { transform: translateY(-14px) scale(0.96, 1.05); }
+  60% { transform: translateY(0) scale(1.04, 0.94); }
+}
+@keyframes nobody-walk-flip {
+  0%, 100% { transform: scaleX(-1) translateY(0); }
+  30% { transform: scaleX(-1) translateY(-14px); }
+  60% { transform: scaleX(-1) translateY(0); }
+}
+@keyframes nobody-wave {
+  0%, 100% { transform: rotate(-12deg); }
+  50% { transform: rotate(52deg); }
+}
+@keyframes nobody-ear {
+  0%, 86%, 100% { transform: rotate(0deg); }
+  90% { transform: rotate(-7deg); }
+  95% { transform: rotate(5deg); }
+}
+@keyframes nobody-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(-2deg); }
+}
+@keyframes nobody-breathe {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(1.015, 0.985); }
+}
+@keyframes nobody-celebrate {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  40% { transform: translateY(-22px) rotate(-4deg); }
+  70% { transform: translateY(0) rotate(2deg); }
+}
+@keyframes nobody-pulse {
+  0%, 100% { transform: scale(0.96); opacity: 0.5; }
+  50% { transform: scale(1.04); opacity: 0.95; }
+}
+
+/* --- Konfetti (nur celebrate, exakt sparsam) ------------------------------ */
+
+.confetti {
+  position: absolute;
+  bottom: 130px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  pointer-events: none;
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .nobody-wrap--celebrating .confetti {
+    animation: confetti-fall 1.4s ease-out 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Statisches Sternchen statt Konfetti (Plan § 9) */
+  .nobody-wrap--celebrating .confetti--star {
+    opacity: 1;
+    transition: opacity 0.3s ease;
+  }
+}
+@keyframes confetti-fall {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  100% { opacity: 0; transform: translate(var(--cx), 90px) rotate(300deg); }
+}
+
+/* --- Sprechblase ----------------------------------------------------------- */
+
+.bubble {
+  position: absolute;
+  bottom: 172px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(296px, calc(100vw - 16px));
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 18px;
+  line-height: 1.45;
+}
+.bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid var(--card);
+}
+.bubble-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--cyan);
+  font-size: 16px;
+}
+.bubble-close {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 18px;
+  cursor: pointer;
+}
+.bubble-close:focus-visible,
+.bubble-btn:focus-visible {
+  outline: 3px solid var(--cyan);
+  outline-offset: 2px;
+}
+.bubble-text {
+  margin: 0 0 12px;
+}
+.bubble-actions {
+  display: grid;
+  gap: 8px;
+}
+.bubble-btn {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #16202c;
+  color: var(--text);
+  font-size: 18px;
+  cursor: pointer;
+  text-align: center;
+}
+.bubble-btn:hover {
+  border-color: var(--cyan);
+}
+.bubble-btn--primary {
+  background: #06333f;
+  border-color: var(--cyan);
+}
