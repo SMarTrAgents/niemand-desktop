@@ -17,6 +17,7 @@
  */
 
 import type { Sprache } from "./i18n";
+import { QUELLSPRACHE, SPRACHEN, setzeKursPruefer } from "./i18n";
 
 export type SkillLevel = "neu" | "etwas" | "geuebt";
 export type Zielgruppe = "senior" | "beruf" | "jung";
@@ -24,12 +25,32 @@ export type Zielgruppe = "senior" | "beruf" | "jung";
 /** Text mit optionalen Zielgruppen-Varianten. */
 export type TextVar = string | ({ standard: string } & Partial<Record<Zielgruppe, string>>);
 
-/** Ein Text in beiden Sprachen — jede Seite darf Zielgruppen-Varianten tragen. */
-export type LText = { de: TextVar; en: TextVar };
+/**
+ * Ein Text in allen Sprachen — jede Seite darf Zielgruppen-Varianten tragen.
+ *
+ * **Deutsch ist Pflicht, alles andere freiwillig.** Das ist die eine Zeile, an
+ * der die Mitarbeit hängt: Vorher stand hier `{ de: TextVar; en: TextVar }`,
+ * beide Sprachen als Pflichtfelder. Wer eine dritte Sprache eintragen wollte,
+ * musste sie in JEDEM Textobjekt dieser Datei ergänzen — 644 Zeilen —, sonst
+ * kompilierte TypeScript nicht. Eine halbe Übersetzung war damit technisch
+ * unmöglich, und eine Mauer am Anfang ist dasselbe wie eine geschlossene Tür.
+ *
+ * Jetzt gilt: Trag ein, was du hast. Der Rest fällt auf Deutsch zurück, und
+ * deine Sprache erscheint in der Auswahl, sobald sie vollständig ist.
+ */
+export type LText = { de: TextVar } & Partial<Record<Sprache, TextVar>>;
 
-/** Wählt erst die Sprache, dann die Zielgruppen-Variante (Fallback standard). */
+/**
+ * Wählt erst die Sprache, dann die Zielgruppen-Variante (Rückfall standard).
+ *
+ * Der Rückfall auf die Quellsprache ist eine Sicherung, kein Betriebszustand:
+ * Eine unvollständige Sprache steht gar nicht zur Wahl (i18n.ts,
+ * `verfuegbareSprachen`). Er verhindert nur, dass ein einzelner vergessener
+ * Text den Kurs anhält — mitten in einer Lektion ist ein deutscher Satz
+ * unendlich viel besser als ein Absturz.
+ */
 export function textFuer(lt: LText, sprache: Sprache, zg: Zielgruppe | null): string {
-  const t = lt[sprache];
+  const t = lt[sprache] ?? lt[QUELLSPRACHE];
   if (typeof t === "string") return t;
   return (zg && t[zg]) || t.standard;
 }
@@ -642,3 +663,68 @@ export function ladeStand(): KursStand {
 export function speichereStand(stand: KursStand): void {
   localStorage.setItem(KEY, JSON.stringify(stand));
 }
+
+/* ===================================================================
+ * Vollständigkeit der Kurstexte
+ * ===================================================================
+ *
+ * Gezählt wird, was einer Sprache noch fehlt — nicht, ob sie „gut genug“ ist.
+ * Diese Zahl steht in `npm run sprachen` und entscheidet zusammen mit den
+ * Oberflächentexten, ob eine Sprache in der Auswahl auftaucht (i18n.ts).
+ *
+ * Der Zähler läuft über die WIRKLICHEN Daten und nicht über eine gepflegte
+ * Liste. Eine Liste, die jemand nachziehen muss, ist eine Liste, die
+ * irgendwann nicht mehr stimmt — dieser Fehler hat dieses Projekt an anderer
+ * Stelle schon Zeit gekostet.
+ */
+
+/** Sammelt jedes LText-Objekt, das irgendwo in den Kursdaten steckt. */
+function alleTexte(): LText[] {
+  const gefunden: LText[] = [];
+  const gesehen = new Set<unknown>();
+
+  const gehe = (wert: unknown): void => {
+    if (wert === null || typeof wert !== "object") return;
+    if (gesehen.has(wert)) return; // gegen Ringe, falls je welche entstehen
+    gesehen.add(wert);
+    if (Array.isArray(wert)) {
+      for (const x of wert) gehe(x);
+      return;
+    }
+    /* Ein LText erkennt man daran, dass er die Quellsprache trägt und deren
+       Wert ein Text oder eine Zielgruppen-Variante ist. */
+    const kandidat = wert as Record<string, unknown>;
+    const quelle = kandidat[QUELLSPRACHE];
+    if (typeof quelle === "string" || (quelle !== null && typeof quelle === "object" && "standard" in (quelle as object))) {
+      gefunden.push(wert as LText);
+      return; // ein LText hat keine verschachtelten LTexte
+    }
+    for (const x of Object.values(kandidat)) gehe(x);
+  };
+
+  gehe(KURS);
+  gehe(CHECK_FRAGEN);
+  gehe(GRUPPEN_FRAGE);
+  gehe(GRUPPEN_OPTIONEN);
+  return gefunden;
+}
+
+/** Wie viele Kurstexte es insgesamt gibt (= was eine Sprache leisten muss). */
+export function kurstexteGesamt(): number {
+  return alleTexte().length;
+}
+
+/** Wie viele Kurstexte einer Sprache noch fehlen. */
+export function fehlendeKurstexte(s: Sprache): number {
+  if (s === QUELLSPRACHE) return 0;
+  return alleTexte().filter((t) => t[s] === undefined).length;
+}
+
+/* Beim Laden bei i18n.ts anmelden, damit `verfuegbareSprachen()` beide Seiten
+   kennt und niemand zwei Stellen im Blick behalten muss. */
+setzeKursPruefer(fehlendeKurstexte);
+
+/* `SPRACHEN` wird hier nur importiert, damit dieses Modul mit derselben
+   Sprachliste rechnet wie die Oberfläche. Ein zweiter Ort für dieselbe Liste
+   wäre genau der Fehler, den die Prüfung oben verhindern soll. */
+void SPRACHEN;

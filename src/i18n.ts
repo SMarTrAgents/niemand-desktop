@@ -1,26 +1,83 @@
 /**
- * Zweisprachigkeit (DE/EN) ab 0.5.0 — Niemand spricht Deutsch und einfaches
- * Englisch. Hier wohnen ALLE festen Oberflächentexte aus App.tsx und
- * Course.tsx; die Kurstexte selbst liegen zweisprachig in course.ts (LText).
+ * Mehrsprachigkeit — Niemand spricht Deutsch und einfaches Englisch, und ab
+ * 0.7.0 jede Sprache, die jemand beisteuert. Hier wohnen ALLE festen
+ * Oberflächentexte aus App.tsx und Course.tsx; die Kurstexte selbst liegen
+ * mehrsprachig in kurs.ts (LText).
  *
  * Sprachwahl: gespeicherte Wahl (localStorage) vor Systemsprache.
- * Ton auf Englisch wie auf Deutsch: kurze Sätze, ein Gedanke pro Satz, warm,
- * nie „wrong/error“ — stattdessen „Almost!“ / „No worries“.
+ * Ton in jeder Sprache wie auf Deutsch: kurze Sätze, ein Gedanke pro Satz,
+ * warm, nie „falsch/Fehler“ — stattdessen „Fast!“ / „Kein Problem“.
  * Feste Produktkonvention: „AUFTRAG: …“ heißt auf Englisch „TASK: …“.
+ *
+ * ===================================================================
+ * FÜR ÜBERSETZER — das Wichtigste in fünf Zeilen
+ * ===================================================================
+ * 1. Trag deinen Sprachcode unten in SPRACHEN ein.
+ * 2. Schreib deine Texte neben die deutschen. Du musst NICHT alles auf
+ *    einmal machen — was fehlt, fällt auf Deutsch zurück.
+ * 3. Schick den Stand als Pull Request. Auch halbfertig. Wirklich.
+ * 4. `npm run sprachen` sagt dir, wie weit du bist und was noch fehlt.
+ * 5. Deine Sprache erscheint in der Auswahl erst, wenn sie VOLLSTÄNDIG ist —
+ *    bis dahin sieht niemand ein halb übersetztes Programm.
+ *
+ * Punkt 5 ist eine Entscheidung für die Menschen, für die das hier gebaut
+ * ist: Wer zum ersten Mal am Computer sitzt, kommt mit einem Programm, das
+ * mitten im Satz die Sprache wechselt, nicht zurecht. Deshalb sammeln wir
+ * lieber, bis eine Sprache trägt.
+ * ===================================================================
  */
 
-export type Sprache = "de" | "en";
+/**
+ * Die Sprachen, die es gibt. Deutsch ist die Quellsprache: Es ist die einzige,
+ * die vollständig sein MUSS, und der Rückfall für alles, was anderswo fehlt.
+ *
+ * Eine neue Sprache trägt sich hier ein — eine Zeile, mehr nicht.
+ */
+export const SPRACHEN = ["de", "en"] as const;
+
+export type Sprache = (typeof SPRACHEN)[number];
+
+/**
+ * Die Quellsprache. Sie ist nie unvollständig und immer der letzte Rückfall.
+ *
+ * Bewusst als Literal (`as const`) und nicht als `Sprache` typisiert: Nur so
+ * weiß TypeScript beim Zugriff `lt[QUELLSPRACHE]`, dass dort wirklich etwas
+ * steht — bei der breiteren Typisierung wäre jeder Rückfall wieder
+ * `undefined`-verdächtig, und der Rückfall ist genau die Stelle, die halten
+ * muss.
+ */
+export const QUELLSPRACHE = "de" as const;
+export type Quellsprache = typeof QUELLSPRACHE;
+
+/**
+ * Wie eine Sprache heißt — in ihrer eigenen Sprache, denn die Auswahl liest
+ * jemand, der die anderen nicht kann.
+ */
+export const SPRACHNAMEN: Record<Sprache, string> = {
+  de: "Deutsch",
+  en: "English",
+};
 
 const SPRACHE_KEY = "niemand.sprache";
+
+function istSprache(wert: unknown): wert is Sprache {
+  return typeof wert === "string" && (SPRACHEN as readonly string[]).includes(wert);
+}
 
 export function ladeSprache(): Sprache {
   try {
     const raw = localStorage.getItem(SPRACHE_KEY);
-    if (raw === "de" || raw === "en") return raw;
+    /* Eine gespeicherte Wahl gilt nur, solange die Sprache noch vollständig
+       ist. Wird eine Sprache je zurückgebaut, landet der Mensch nicht in einem
+       halben Programm, sondern sanft in seiner Systemsprache. */
+    if (istSprache(raw) && verfuegbareSprachen().includes(raw)) return raw;
   } catch {
     /* kein Speicher verfügbar → Systemsprache entscheidet */
   }
-  return navigator.language.startsWith("de") ? "de" : "en";
+  const system = (navigator.language || "").slice(0, 2).toLowerCase();
+  const verfuegbar = verfuegbareSprachen();
+  if (istSprache(system) && verfuegbar.includes(system)) return system;
+  return verfuegbar.includes("en") ? "en" : QUELLSPRACHE;
 }
 
 export function speichereSprache(s: Sprache): void {
@@ -107,7 +164,16 @@ export interface UiTexte {
   quizAusweich: string;
 }
 
-export const UI: Record<Sprache, UiTexte> = {
+/**
+ * Die Oberflächentexte, so wie sie eingetragen sind.
+ *
+ * Deutsch ist vollständig — das erzwingt der Typ. Jede andere Sprache darf
+ * Lücken haben: `Partial`. Genau das macht eine halbe Übersetzung mergefähig,
+ * und genau daran ist der alte Aufbau gescheitert (`Record<Sprache, UiTexte>`
+ * verlangte von jeder neuen Sprache alles auf einmal — 295 Zeilen hier plus
+ * 644 in kurs.ts, bevor überhaupt etwas kompilierte).
+ */
+export const UI_ROH: { de: UiTexte } & Partial<Record<Sprache, Partial<UiTexte>>> = {
   de: {
     name: "Niemand",
     ariaSpricht: "Niemand spricht",
@@ -293,3 +359,86 @@ export const UI: Record<Sprache, UiTexte> = {
     quizAusweich: "Let's try it another way.",
   },
 };
+
+/* ===================================================================
+ * Vollständigkeit — und was die Auswahl davon zu sehen bekommt
+ * ===================================================================
+ *
+ * Der Entscheid (29.07.2026): Eine Sprache erscheint in der Auswahl erst,
+ * wenn sie GANZ da ist. Halbe Übersetzungen werden trotzdem angenommen und
+ * gemergt — sie sammeln sich, bis eine Sprache trägt. So ist jeder Beitrag
+ * klein genug, um an einem Abend zu entstehen, und niemand sieht ein
+ * Programm, das mitten im Satz die Sprache wechselt.
+ */
+
+/** Die Schlüssel, die eine vollständige Oberfläche braucht. */
+export const UI_SCHLUESSEL = Object.keys(UI_ROH.de) as (keyof UiTexte)[];
+
+/** Was einer Sprache an Oberflächentexten noch fehlt. */
+export function fehlendeUiSchluessel(s: Sprache): (keyof UiTexte)[] {
+  if (s === QUELLSPRACHE) return [];
+  const vorhanden = UI_ROH[s] ?? {};
+  return UI_SCHLUESSEL.filter((k) => vorhanden[k] === undefined);
+}
+
+/**
+ * Die benutzbaren Oberflächentexte: Fehlendes fällt auf die Quellsprache
+ * zurück. Der Rückfall ist eine Sicherung, kein Betriebszustand — eine
+ * unvollständige Sprache steht ja gar nicht zur Wahl. Er verhindert nur, dass
+ * ein vergessener Schlüssel das Programm zerlegt.
+ */
+export const UI: Record<Sprache, UiTexte> = Object.fromEntries(
+  SPRACHEN.map((s) => [s, { ...UI_ROH.de, ...(UI_ROH[s] ?? {}) }])
+) as Record<Sprache, UiTexte>;
+
+/* Die Kurstexte prüft kurs.ts selbst — hier wird die Prüfung nur eingehängt,
+   damit `verfuegbareSprachen()` beides zusammen beantworten kann und niemand
+   zwei Stellen im Blick behalten muss. */
+type KursPruefer = (s: Sprache) => number;
+let fehlendeKurstexte: KursPruefer = () => 0;
+
+/** kurs.ts meldet sich hier an. Wird beim Laden des Moduls aufgerufen. */
+export function setzeKursPruefer(fn: KursPruefer): void {
+  fehlendeKurstexte = fn;
+}
+
+export interface Sprachstand {
+  sprache: Sprache;
+  name: string;
+  fehlendUi: number;
+  fehlendKurs: number;
+  gesamtUi: number;
+  vollstaendig: boolean;
+  /** 0–100, gerundet. Nur zum Anzeigen. */
+  prozent: number;
+}
+
+export function sprachstand(s: Sprache): Sprachstand {
+  const fehlendUi = fehlendeUiSchluessel(s).length;
+  const fehlendKurs = s === QUELLSPRACHE ? 0 : fehlendeKurstexte(s);
+  const gesamtUi = UI_SCHLUESSEL.length;
+  const fehlt = fehlendUi + fehlendKurs;
+  /* Der Nenner ist nur für die Anzeige da: Oberfläche plus das, was der
+     Kursprüfer als Gesamtzahl kennt. Er wird nie null, weil UI_SCHLUESSEL
+     immer gefüllt ist. */
+  const gesamt = gesamtUi + fehlendKurs + (s === QUELLSPRACHE ? 0 : 0);
+  return {
+    sprache: s,
+    name: SPRACHNAMEN[s] ?? s,
+    fehlendUi,
+    fehlendKurs,
+    gesamtUi,
+    vollstaendig: fehlt === 0,
+    prozent: fehlt === 0 ? 100 : Math.max(0, Math.round(((gesamt - fehlt) / gesamt) * 100)),
+  };
+}
+
+/**
+ * Die Sprachen, die der Mensch wirklich wählen kann.
+ *
+ * Die Quellsprache ist immer dabei — sie kann per Typ nicht unvollständig
+ * sein. Alles andere muss sich seinen Platz verdienen.
+ */
+export function verfuegbareSprachen(): Sprache[] {
+  return SPRACHEN.filter((s) => s === QUELLSPRACHE || sprachstand(s).vollstaendig);
+}

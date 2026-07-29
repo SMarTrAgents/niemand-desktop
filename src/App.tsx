@@ -12,7 +12,14 @@ import Course, { PetSignal } from "./Course";
 import Todo, { TodoSignal } from "./Todo";
 import { KURS, ladeStand } from "./kurs";
 import { TODO_EVENT, ladeAufgaben, syncEinmal } from "./aufgaben";
-import { Sprache, UI, ladeSprache, speichereSprache } from "./i18n";
+import {
+  Sprache,
+  UI,
+  ladeSprache,
+  speichereSprache,
+  verfuegbareSprachen,
+  QUELLSPRACHE,
+} from "./i18n";
 import "./pet.css";
 
 /** Zustände des Tierchens (Superset des Cloud-Widgets, Plan § 3). */
@@ -53,9 +60,20 @@ export default function App() {
   const [, setTodoTick] = useState(0);
   const [sprache, setSprache] = useState<Sprache>(() => ladeSprache());
   const ui = UI[sprache];
-  /* Umschalt-Knopf zeigt die andere Sprache; Wahl bleibt gespeichert. */
+  /*
+   * Umschalt-Knopf: reiht die verfügbaren Sprachen durch und bleibt damit
+   * richtig, egal wie viele es einmal sind. Vorher stand hier fest
+   * `de → en → de`; eine dritte Sprache wäre unerreichbar gewesen, obwohl sie
+   * in der Liste steht.
+   *
+   * `verfuegbareSprachen()` gibt nur zurück, was VOLLSTÄNDIG übersetzt ist —
+   * eine halbe Sprache erscheint hier also nie, auch wenn ihre Texte schon im
+   * Quelltext liegen und wachsen.
+   */
   const sprachWechsel = () => {
-    const neu: Sprache = sprache === "de" ? "en" : "de";
+    const auswahl = verfuegbareSprachen();
+    const jetzt = auswahl.indexOf(sprache);
+    const neu: Sprache = auswahl[(jetzt + 1) % auswahl.length] ?? QUELLSPRACHE;
     setSprache(neu);
     speichereSprache(neu);
   };
