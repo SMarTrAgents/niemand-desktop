@@ -11,7 +11,7 @@ import NobodyRabbitSvg from "./NobodyRabbit";
 import Course, { PetSignal } from "./Course";
 import Todo, { TodoSignal } from "./Todo";
 import { KURS, ladeStand } from "./kurs";
-import { TODO_EVENT, ladeAufgaben, syncEinmal } from "./todo";
+import { TODO_EVENT, ladeAufgaben, syncEinmal } from "./aufgaben";
 import { Sprache, UI, ladeSprache, speichereSprache } from "./i18n";
 import "./pet.css";
 

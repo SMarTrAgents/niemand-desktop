@@ -11,7 +11,7 @@ import {
   schluessel,
   speichereAufgaben,
   syncEinmal,
-} from "./todo";
+} from "./aufgaben";
 import { Sprache, UI } from "./i18n";
 
 /** Rückmeldungen an den Hasen — Gefühle gehören dem Tier, nicht der Karte. */
