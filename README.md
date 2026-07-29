@@ -2,7 +2,7 @@
 
 **Niemand** (englisch **Nobody** — ja, wirklich, so heißt er) ist der weiße Hase von
 [SMarTrAgents](https://smartragents.ai) — ein vollanimiertes **Desktop-Tierchen** für
-Windows, macOS und Ubuntu mit eingebautem, **kostenlosem Computerkurs**.
+Windows, macOS und Linux mit eingebautem, **kostenlosem Computerkurs**.
 
 Er wohnt auf deinem Bildschirm und erklärt dir deinen Computer Schritt für Schritt:
 WLAN, Drucker, Dateien, richtig ausschalten, sicher bleiben — dann der Browser mit
@@ -18,7 +18,7 @@ oder Ausbildung — jeder bekommt seine eigenen Beispiele, Senioren größere Sc
 ## 🇬🇧 Nobody — the free computer course for young and old
 
 Nobody is the white rabbit from [smartragents.ai](https://smartragents.ai) — a fully
-animated **desktop pet** for Windows, macOS and Ubuntu with a built-in **free
+animated **desktop pet** for Windows, macOS and Linux with a built-in **free
 computer course for young and old**. He teaches Wi-Fi, printers, files, safe
 passwords, shutting down properly, the browser with tabs and favorites — and then
 introduces your AI helpers at [cloud.smartragents.ai](https://cloud.smartragents.ai).
@@ -34,9 +34,15 @@ Ein Klick, fertig — Installer für alle Systeme gibt es unter
 | System | Datei |
 |---|---|
 | Windows | `Niemand_x.y.z_x64-setup.exe` |
+| Windows (Firmen-IT) | `Niemand_x.y.z_x64_en-US.msi` |
 | macOS | `Niemand_x.y.z_universal.dmg` |
 | Ubuntu/Debian | `Niemand_x.y.z_amd64.deb` |
+| Fedora/openSUSE | `Niemand-x.y.z-1.x86_64.rpm` |
 | andere Linux | `Niemand_x.y.z_amd64.AppImage` |
+
+Bequemer geht es über **[smartragents.ai/desktop](https://smartragents.ai/desktop/)**:
+Dort erkennt die Seite dein System, zeigt die passende Datei und listet die
+SHA256-Prüfsummen zum Nachrechnen.
 
 ## Was Niemand kann
 
@@ -78,12 +84,16 @@ kein Always-on-top).
 ## Fahrplan
 
 - [x] **E1** — der Hase lebt: Fenster, Animationen, Tray, Einzelinstanz
-- [ ] **E2/E3** — Verbindung zum SMarTrAgents-Konto (Gerätecode, Präsenz-Sync)
-- [ ] **E4** — Akt 1: Kenntnis-Check, WLAN, Drucker, Dateien, LibreOffice-Kurs
-- [ ] **E5** — Akt 2: Browser installieren und verstehen
-- [ ] **E6** — Akt 3: deine Agenten kennenlernen und einrichten
-- [ ] **E7** — Vorlesen (deutsche Stimme, auch offline)
-- [ ] **E8** — signierte Installer + Auto-Update
+- [x] **E4** — Akt 1: Kenntnis-Check, WLAN, Drucker, Dateien (mit echten Prüfungen)
+- [x] **E5** — Akt 2: Browser mit Tabs und Favoriten
+- [x] **E6** — Akt 3: deine Agenten kennenlernen
+- [x] **0.5** — zweisprachig Deutsch/Englisch
+- [x] **0.6** — Aufgabenzettel mit Cloud-Sync: Anmeldung am SMarTrAgents-Konto,
+      Notiz `workdir/notepad/Niemand-Aufgaben.md`, Agenten schreiben mit
+- [ ] **Präsenz-Sync** — Desktop-Niemand blendet den Cloud-Niemand aus
+- [ ] **Vorlesen** (deutsche Stimme, auch offline)
+- [ ] **Signierte Installer** + Auto-Update
+- [ ] **LibreOffice-Kurs** als vierter Akt
 
 ## Lizenz
 
