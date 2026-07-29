@@ -38,17 +38,27 @@ Ein Klick, fertig — Installer für alle Systeme gibt es unter
 | Ubuntu/Debian | `Niemand_x.y.z_amd64.deb` |
 | andere Linux | `Niemand_x.y.z_amd64.AppImage` |
 
-## Was Niemand kann (Stand: Prototyp E1)
+## Was Niemand kann
 
+- 🥕 **Der Computerkurs** — Kenntnis-Check am Anfang, echte Prüfungen („Bist du
+  online?“, „Ist ein Drucker da?“), Möhren als Fortschritt, Senioren-Großschrift
+- 📝 **Der Aufgabenzettel** (neu in 0.6): Aufschreiben, Abhaken mit grünem Haken,
+  Löschen bewusst in drei Klicks (Haken → Mülltonne → weg). Auf Wunsch mit deinem
+  [SMarTrAgents-Konto](https://cloud.smartragents.ai) verbunden: dann steht der
+  Zettel auch in deinen Cloud-Notizen — und deine KI-Agenten können Aufgaben für
+  dich eintragen. Niemand pulst kurz, wenn etwas Neues draufsteht.
 - 🐇 Lebt als kleines, transparentes Fenster auf deinem Schreibtisch — immer sichtbar, nie im Weg
-- 🥕 Hoppelt auf Wunsch über den Bildschirmrand, zwinkert, denkt, feiert, schläft
-- 💬 Sprechblase per Klick — große Knöpfe, klare Sprache, per Escape wieder zu
-- 🛎️ Leisten-Symbol (Tray): *Niemand rufen · Schlafen legen · Beenden*
+- 🎪 Kunststücke: Hoppeln über den Bildschirm, Nachdenken, Rechnen (öffnet den
+  echten Taschenrechner), Freuen mit Konfetti
+- 🛎️ Leisten-Symbol (Tray): *Niemand rufen · In die Ecke setzen · Schlafen legen · Beenden*
 - ♿ Barrierefrei gedacht: Tastatur-Bedienung, sichtbarer Fokus, `prefers-reduced-motion`
-- 🔇 Kein Ton, keine Unterbrechungen, keine Datensammlung
+- 🔇 Kein Ton, keine Unterbrechungen, keine Datensammlung — die Cloud-Verbindung
+  ist freiwillig und jederzeit trennbar
 
-Der komplette Computerkurs (drei Akte: *Dein Computer* → *Dein Fenster ins Netz* →
-*Deine Agenten*) mit Kenntnis-Check am Anfang ist in Arbeit — Fahrplan siehe unten.
+**🇬🇧 New in 0.6: the to-do list.** Write things down, check them off with a green
+tick, delete deliberately in three taps (tick → bin → gone). Connect your
+SMarTrAgents account and the list also lives in your cloud notes — your AI agents
+can add tasks for you, and Nobody gives a gentle pulse when something new arrives.
 
 ## Entwicklung
 
