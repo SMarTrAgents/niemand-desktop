@@ -13,6 +13,17 @@
   --text: #eaf4f8;
 }
 
+/* Karten rechnen in Gesamtmaßen (border-box) — sonst ragen 296px-Blasen mit
+   Padding+Rahmen als 326px aus dem 320px-Fenster und Pixelbudgets lügen. */
+.bubble,
+.bubble *,
+.course,
+.course *,
+.todo,
+.todo * {
+  box-sizing: border-box;
+}
+
 .stage {
   position: relative;
   width: 100%;
@@ -545,12 +556,14 @@
   }
 }
 
-/* Menü als Panel (wie die Kurskarte): volle Fläche, Hase klein daneben */
+/* Menü als Panel (wie die Kurskarte): volle Fläche, Hase klein daneben.
+   bottom 124 statt 132: der kleine Hase (96px) braucht die Reserve nicht,
+   das Menü aber jeden Pixel — alle Knöpfe ohne Scrollen sichtbar. */
 .bubble--panel {
   top: 8px;
   left: 8px;
   right: 8px;
-  bottom: 132px;
+  bottom: 124px;
   transform: none;
   width: auto;
   max-height: none;
@@ -559,20 +572,43 @@
   display: none;
 }
 
-/* Gag-Reihe: Zeichen-Knöpfe, Wörter stecken in aria/title */
-.gag-zeile {
+/* Menü-Inhalt: Reihen behalten IMMER ihre Höhe (flex: none) — wird es doch
+   mal eng (kleine Bildschirme, große Schrift), scrollt der ganze Block
+   sichtbar, statt Knöpfe zu stauchen oder abzuschneiden. */
+.menu-scroll {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
-  margin: 10px 0 8px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.menu-scroll > * {
+  flex: 0 0 auto;
+  margin: 0;
+}
+.bubble-text--gruss {
+  overflow-y: visible;
+  flex: 0 0 auto;
+}
+
+/* Kunststücke: Beschriftung eigene Zeile, darunter ein 4er-Raster —
+   so passen alle vier Zeichen-Knöpfe in jede Panelbreite (Wörter in aria/title). */
+.gag-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 .gag-label {
   font-size: 15px;
   color: #9fb3c4;
 }
+.gag-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
 .gag-btn {
-  flex: 1;
-  min-width: 48px;
   min-height: 48px;
   font-size: 24px;
   border-radius: 12px;
@@ -605,4 +641,230 @@
 .bubble-btn--primary {
   background: #06333f;
   border-color: var(--cyan);
+}
+.bubble-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* --- Aufgabenzettel (v0.6.0) ----------------------------------------------
+   Gleiche Karte wie der Kurs: füllt das Fenster oberhalb des kleinen Hasen,
+   die LISTE scrollt innen, Kopf und Eingabezeile bleiben immer sichtbar. */
+.todo {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 132px;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 18px;
+  line-height: 1.5;
+}
+.todo-zaehler {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #9fb3c4;
+  flex: 0 0 auto;
+}
+.todo-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.todo-item {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #16202c;
+  overflow: hidden;
+}
+.todo-item--scharf {
+  border-color: #ff6b6b;
+}
+/* Der 3-Klick-Knopf: leer → grüner Haken → Mülltonne. Groß genug für
+   zittrige Hände, deutlich abgesetzt vom Text. */
+.todo-status {
+  flex: 0 0 auto;
+  width: 52px;
+  min-height: 52px;
+  font-size: 22px;
+  border: none;
+  border-right: 1px solid var(--line);
+  background: #101823;
+  color: var(--text);
+  cursor: pointer;
+}
+.todo-status--haken {
+  color: #35d073;
+  font-weight: 700;
+}
+.todo-status--muell {
+  background: #3a1620;
+}
+.todo-status:focus-visible,
+.todo-text:focus-visible,
+.todo-cloud-knopf:focus-visible {
+  outline: 3px solid var(--cyan);
+  outline-offset: -3px;
+}
+.todo-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.4;
+  text-align: left;
+  padding: 10px 12px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.todo-item--erledigt .todo-text {
+  text-decoration: line-through;
+  color: #9fb3c4;
+}
+/* Offene Einträge: Text ist Fläche, kein Knopf (nichts Totes im Tab-Weg). */
+.todo-text--passiv {
+  cursor: default;
+}
+.todo-marke {
+  display: block;
+  font-size: 13px;
+  color: #7ea4b8;
+  text-decoration: none;
+}
+.todo-fuss {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex: 0 0 auto;
+}
+.todo-eingabe {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #101823;
+  color: var(--text);
+  font-size: 18px;
+  padding: 0 12px;
+}
+.todo-eingabe:focus-visible {
+  outline: 3px solid var(--cyan);
+  outline-offset: 1px;
+}
+.todo-plus {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 0 14px;
+}
+
+/* Cloud-Zeile: dezent, unterhalb des Titels */
+.todo-cloud {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #111a26;
+  font-size: 14px;
+  color: #9fb3c4;
+}
+.todo-cloud--an {
+  border-color: #1f4d43;
+  color: #9fd4c0;
+}
+.todo-cloud-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.todo-cloud-knopf {
+  flex: 0 0 auto;
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #16202c;
+  color: var(--text);
+  font-size: 14px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+.todo-cloud-knopf:hover {
+  border-color: var(--cyan);
+}
+
+/* Anmelde-Karte: Felder scrollen INNEN, die Knopfreihe darunter bleibt
+   immer sichtbar (Hausregel „Knöpfe nie unter der Kante“). */
+.todo-login {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.todo-login-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.todo-login-titel {
+  margin: 0;
+  font-weight: 700;
+  color: var(--cyan);
+}
+.todo-login-text {
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: #c7d6e0;
+}
+.todo-feld {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 15px;
+  color: #9fb3c4;
+  flex: 0 0 auto;
+}
+.todo-feld input {
+  min-height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #101823;
+  color: var(--text);
+  font-size: 18px;
+  padding: 0 12px;
+}
+.todo-feld input:focus-visible {
+  outline: 3px solid var(--cyan);
+  outline-offset: 1px;
+}
+.todo-login-meldung {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #2a2030;
+  border: 1px solid #4d3a5c;
+  font-size: 15px;
 }

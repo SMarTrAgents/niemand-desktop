@@ -1,6 +1,6 @@
 [package]
 name = "niemand-desktop"
-version = "0.5.2"
+version = "0.6.0"
 description = "Niemand — der weiße Hase von SMarTrAgents als Desktop-Tierchen"
 authors = ["SMarTrAgents"]
 edition = "2021"
@@ -17,6 +17,10 @@ tauri = { version = "2", features = ["macos-private-api", "tray-icon", "image-pn
 tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Cloud-Sync (Aufgabenzettel): rustls statt System-OpenSSL — baut auf allen
+# drei CI-Zielen ohne native TLS-Abhängigkeiten. system-proxy: Proxys aus den
+# OS-Einstellungen respektieren (Firmen-/Senioren-PCs hinter Proxy).
+reqwest = { version = "0.12", default-features = false, features = ["json", "multipart", "rustls-tls", "system-proxy", "macos-system-configuration"] }
 
 [profile.release]
 # Kleines, schnelles Dauerläufer-Binary

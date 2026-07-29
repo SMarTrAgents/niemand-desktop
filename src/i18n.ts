@@ -51,6 +51,33 @@ export interface UiTexte {
   einstellungenZeigen: string;
   schlafen: string;
   beenden: string;
+  /* --- Aufgabenzettel (v0.6.0) ------------------------------------------ */
+  aufgabenKnopf: string;
+  aufgabenKnopfMit: (offen: number) => string;
+  aufgabenTitel: string;
+  zettelSchliessen: string;
+  ariaAufgaben: string;
+  aufgabenLeer: string;
+  aufgabenZaehler: (offen: number, erledigt: number) => string;
+  aufgabenEingabe: string;
+  aufschreiben: string;
+  abhakenHint: string;
+  loeschenScharfHint: string;
+  endgueltigLoeschenHint: string;
+  wiederAufmachenHint: string;
+  vonCloudMarke: string;
+  cloudVerbindenKnopf: string;
+  cloudVerbunden: (email: string) => string;
+  cloudGetrennt: string;
+  cloudOffline: string;
+  cloudAbmelden: string;
+  anmeldenTitel: string;
+  anmeldenErklaerung: string;
+  emailFeld: string;
+  passwortFeld: string;
+  totpFeld: string;
+  anmeldenKnopf: string;
+  loginFehler: (code: string) => string;
   /** Umschalt-Knopf zeigt immer die JEWEILS ANDERE Sprache. */
   sprachWechsel: string;
   zeigenText: string;
@@ -95,9 +122,56 @@ export const UI: Record<Sprache, UiTexte> = {
     nachdenkenHint: "Nachdenken",
     rechnenHint: "Rechnen — öffnet den Taschenrechner",
     freuenHint: "Freuen",
-    einstellungenZeigen: "Zeig mir meine Einstellungen",
-    schlafen: "Leg dich schlafen",
+    einstellungenZeigen: "Meine Einstellungen",
+    schlafen: "Schlafen",
     beenden: "Beenden",
+    aufgabenKnopf: "📝 Mein Aufgabenzettel",
+    aufgabenKnopfMit: (offen) => `📝 Mein Aufgabenzettel (${offen})`,
+    aufgabenTitel: "Dein Aufgabenzettel",
+    zettelSchliessen: "Zettel schließen",
+    ariaAufgaben: "Dein Aufgabenzettel",
+    aufgabenLeer:
+      "Dein Zettel ist noch leer. Schreib unten etwas auf — oder lass deine Agenten planen.",
+    aufgabenZaehler: (offen, erledigt) => `${offen} offen · ${erledigt} erledigt`,
+    aufgabenEingabe: "Was steht an?",
+    aufschreiben: "Aufschreiben",
+    abhakenHint: "Als erledigt abhaken",
+    loeschenScharfHint: "Erledigt — noch einmal tippen zum Löschen",
+    endgueltigLoeschenHint: "Löschen — jetzt tippen und der Eintrag ist weg",
+    wiederAufmachenHint: "Wieder aufmachen",
+    vonCloudMarke: "von deinen Agenten",
+    cloudVerbindenKnopf: "☁️ Mit deiner Cloud verbinden",
+    cloudVerbunden: (email) => `☁️ Verbunden als ${email} — Agenten können mitschreiben`,
+    cloudGetrennt: "Dein Zettel gilt hier auf diesem Computer.",
+    cloudOffline: "Gerade keine Verbindung — dein Zettel bleibt hier sicher gespeichert.",
+    cloudAbmelden: "Verbindung trennen",
+    anmeldenTitel: "Mit deiner Cloud verbinden",
+    anmeldenErklaerung:
+      "Melde dich mit deinem SMarTrAgents-Konto an. Dann landet dein Zettel auch in deinen Notizen, und deine Agenten können Aufgaben für dich eintragen.",
+    emailFeld: "E-Mail-Adresse",
+    passwortFeld: "Passwort",
+    totpFeld: "Code aus deiner Authenticator-App",
+    anmeldenKnopf: "Anmelden",
+    loginFehler: (code) => {
+      switch (code) {
+        case "zugangsdaten":
+          return "Das hat noch nicht gepasst — prüfe E-Mail und Passwort.";
+        case "code_falsch":
+          return "Der Code hat nicht gepasst — probier den nächsten aus der App.";
+        case "email_bestaetigen":
+          return "Bitte bestätige zuerst deine E-Mail-Adresse (schau in dein Postfach).";
+        case "mfa_einrichten":
+          return "Bitte richte einmal in der Cloud deinen zweiten Faktor ein — danach klappt es auch hier.";
+        case "passkey":
+          return "Dein Konto nutzt einen Passkey. Melde dich einmal in der Cloud an und richte dort zusätzlich eine Authenticator-App ein.";
+        case "warten":
+          return "Kurz durchatmen — zu viele Versuche. Probier es gleich noch einmal.";
+        case "offline":
+          return "Gerade keine Verbindung — schau kurz nach deinem Internet und probier es dann noch einmal.";
+        default:
+          return "Das hat gerade nicht geklappt. Probier es gleich noch einmal.";
+      }
+    },
     sprachWechsel: "🌐 English",
     zeigenText:
       "Schau — da oben! Da wohnen deine Einstellungen. Auch der Ton: lauter und leiser. Soll ich sie dir öffnen?",
@@ -141,9 +215,55 @@ export const UI: Record<Sprache, UiTexte> = {
     nachdenkenHint: "Think",
     rechnenHint: "Calculate — opens the calculator",
     freuenHint: "Celebrate",
-    einstellungenZeigen: "Show me my settings",
-    schlafen: "Go to sleep",
+    einstellungenZeigen: "My settings",
+    schlafen: "Sleep",
     beenden: "Quit",
+    aufgabenKnopf: "📝 My to-do list",
+    aufgabenKnopfMit: (offen) => `📝 My to-do list (${offen})`,
+    aufgabenTitel: "Your to-do list",
+    zettelSchliessen: "Close the list",
+    ariaAufgaben: "Your to-do list",
+    aufgabenLeer: "Your list is still empty. Write something below — or let your agents plan for you.",
+    aufgabenZaehler: (offen, erledigt) => `${offen} open · ${erledigt} done`,
+    aufgabenEingabe: "What needs doing?",
+    aufschreiben: "Write it down",
+    abhakenHint: "Mark as done",
+    loeschenScharfHint: "Done — tap once more to delete",
+    endgueltigLoeschenHint: "Delete — tap now and it is gone",
+    wiederAufmachenHint: "Open it again",
+    vonCloudMarke: "from your agents",
+    cloudVerbindenKnopf: "☁️ Connect to your cloud",
+    cloudVerbunden: (email) => `☁️ Connected as ${email} — your agents can write here too`,
+    cloudGetrennt: "Your list lives here on this computer.",
+    cloudOffline: "No connection right now — your list stays safe right here.",
+    cloudAbmelden: "Disconnect",
+    anmeldenTitel: "Connect to your cloud",
+    anmeldenErklaerung:
+      "Sign in with your SMarTrAgents account. Your list then also appears in your notes, and your agents can add tasks for you.",
+    emailFeld: "Email address",
+    passwortFeld: "Password",
+    totpFeld: "Code from your authenticator app",
+    anmeldenKnopf: "Sign in",
+    loginFehler: (code) => {
+      switch (code) {
+        case "zugangsdaten":
+          return "That didn't match yet — check your email and password.";
+        case "code_falsch":
+          return "That code didn't match — try the next one from your app.";
+        case "email_bestaetigen":
+          return "Please confirm your email address first (check your inbox).";
+        case "mfa_einrichten":
+          return "Please set up your second factor once in the cloud — then it works here too.";
+        case "passkey":
+          return "Your account uses a passkey. Sign in to the cloud once and add an authenticator app there.";
+        case "warten":
+          return "Take a breath — too many tries. Give it another go in a moment.";
+        case "offline":
+          return "No connection right now — check your internet, then give it another go.";
+        default:
+          return "That didn't work just now. Please try again in a moment.";
+      }
+    },
     sprachWechsel: "🌐 Deutsch",
     zeigenText:
       "Look — up there! That is where your settings live. The sound too: louder and quieter. Shall I open them for you?",

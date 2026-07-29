@@ -54,6 +54,18 @@ export default function Course({ sprache, onSignal, onClose }: Props) {
     speichereStand(s);
   }, []);
 
+  /* Escape gestuft: aus einer Szene zurück zur Liste, aus Liste/Kennenlernen
+     ganz schließen. (App.tsx überlässt Escape im Kurs bewusst der Kurskarte.) */
+  useEffect(() => {
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (view.art === "szene") setView({ art: "liste" });
+      else onClose();
+    };
+    window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
+  }, [view, onClose]);
+
   /* --- Prüf-Schritte: still nachsehen, Erfolg erkennen. ------------------- */
   const stoppePoll = useCallback(() => {
     if (pollTimer.current) {

@@ -9,7 +9,9 @@ import {
 } from "@tauri-apps/api/window";
 import NobodyRabbitSvg from "./NobodyRabbit";
 import Course, { PetSignal } from "./Course";
+import Todo, { TodoSignal } from "./Todo";
 import { KURS, ladeStand } from "./kurs";
+import { TODO_EVENT, ladeAufgaben, syncEinmal } from "./todo";
 import { Sprache, UI, ladeSprache, speichereSprache } from "./i18n";
 import "./pet.css";
 
@@ -46,6 +48,9 @@ export default function App() {
   const [flip, setFlip] = useState(false);
   const [bubble, setBubble] = useState<BubbleView>("closed");
   const [kurs, setKurs] = useState(false);
+  const [todo, setTodo] = useState(false);
+  /* Zettel-Änderungen (auch aus dem Hintergrund-Sync) → Menü-Zähler frisch. */
+  const [, setTodoTick] = useState(0);
   const [sprache, setSprache] = useState<Sprache>(() => ladeSprache());
   const ui = UI[sprache];
   /* Umschalt-Knopf zeigt die andere Sprache; Wahl bleibt gespeichert. */
@@ -58,6 +63,10 @@ export default function App() {
   stateRef.current = state;
   const kursRef = useRef(kurs);
   kursRef.current = kurs;
+  const todoRef = useRef(todo);
+  todoRef.current = todo;
+  const bubbleRef = useRef(bubble);
+  bubbleRef.current = bubble;
   const walkAbort = useRef(false);
   const sleepTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const demoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -66,7 +75,7 @@ export default function App() {
   const armSleepTimer = useCallback(() => {
     if (sleepTimer.current) clearTimeout(sleepTimer.current);
     sleepTimer.current = setTimeout(() => {
-      if (kursRef.current) return; // im Kurs schläft Niemand nicht ein
+      if (kursRef.current || todoRef.current) return; // bei offener Karte kein Einschlafen
       walkAbort.current = true;
       setBubble("closed");
       setState("sleeping");
@@ -158,12 +167,23 @@ export default function App() {
     listen("niemand://rufen", () => {
       wake();
       setState("waving");
-      setTimeout(() => setState((s) => (s === "waving" ? "idle" : s)), 2600);
+      setTimeout(
+        () =>
+          setState((s) =>
+            s === "waving"
+              ? kursRef.current || todoRef.current || bubbleRef.current === "menu"
+                ? "talking"
+                : "idle"
+              : s,
+          ),
+        2600,
+      );
     }).then(merke);
     listen("niemand://schlafen", () => {
       walkAbort.current = true;
       setBubble("closed");
       setKurs(false);
+      setTodo(false);
       setzeFenster(FENSTER.normalB, FENSTER.normalH);
       setState("sleeping");
     }).then(merke);
@@ -225,19 +245,26 @@ export default function App() {
     setBubble("closed");
     walkAbort.current = false;
     try {
+      // Kam der Klick aus dem (großen) Menü: erst Fenster wieder klein.
+      // Danach NICHT messen, sondern mit den angeforderten Maßen rechnen —
+      // outerSize() liefert direkt nach setSize() noch die alte Größe
+      // (WM bestätigt asynchron), der Hase schwebte sonst über dem Boden.
+      await setzeFenster(FENSTER.normalB, FENSTER.normalH);
       const win = getCurrentWindow();
       const mon = await primaryMonitor();
       if (!mon) return;
-      const size = await win.outerSize();
+      const sf = mon.scaleFactor;
+      const breite = Math.round(FENSTER.normalB * sf);
+      const hoehe = Math.round(FENSTER.normalH * sf);
       const pos = await win.outerPosition();
       const minX = mon.position.x + 8;
-      const maxX = mon.position.x + mon.size.width - size.width - 8;
+      const maxX = mon.position.x + mon.size.width - breite - 8;
       let target = Math.round(minX + Math.random() * (maxX - minX));
       if (Math.abs(target - pos.x) < mon.size.width / 4) {
         target = pos.x < (minX + maxX) / 2 ? maxX : minX;
       }
-      const groundY = mon.position.y + mon.size.height - size.height - 72;
-      await hopTo(target, groundY, mon.scaleFactor);
+      const groundY = mon.position.y + mon.size.height - hoehe - 72;
+      await hopTo(target, groundY, sf);
     } catch (e) {
       console.error("Hoppeln fehlgeschlagen", e);
     } finally {
@@ -245,20 +272,28 @@ export default function App() {
       setFlip(false);
       armSleepTimer();
     }
-  }, [armSleepTimer, hopTo]);
+  }, [armSleepTimer, hopTo, setzeFenster]);
 
   /* --- Zeigen: in die obere rechte Ecke hoppeln und hinzeigen. ------------ */
   const showSettings = useCallback(async () => {
     walkAbort.current = false;
     try {
-      const win = getCurrentWindow();
+      // Zeigen braucht nur die kleine Sprechblase → Fenster zurück auf normal.
+      // Ziel mit den ANGEFORDERTEN Maßen rechnen (outerSize wäre noch alt).
+      await setzeFenster(FENSTER.normalB, FENSTER.normalH);
       const mon = await primaryMonitor();
       if (!mon) return;
-      const size = await win.outerSize();
-      const targetX = mon.position.x + mon.size.width - size.width - 16;
+      const breite = Math.round(FENSTER.normalB * mon.scaleFactor);
+      const targetX = mon.position.x + mon.size.width - breite - 16;
       const targetY = mon.position.y + Math.round(24 * mon.scaleFactor);
       setBubble("closed");
       await hopTo(targetX, targetY, mon.scaleFactor);
+      if (walkAbort.current) {
+        // Mensch hat den Lauf abgebrochen (Klick/Escape) — dann nicht
+        // ungefragt wieder eine Blase aufmachen.
+        setState("idle");
+        return;
+      }
       setFlip(true); // Arm zeigt nach oben rechts (SVG gespiegelt)
       setState("pointing");
       setBubble("zeigen");
@@ -266,12 +301,16 @@ export default function App() {
       console.error("Zeigen fehlgeschlagen", e);
       setState("idle");
     }
-  }, [hopTo]);
+  }, [hopTo, setzeFenster]);
 
   /* --- Kurze Vorführungen: Nachdenken / Rechnen / Feiern. ----------------- */
   const playDemo = useCallback(
     (demo: Extract<PetState, "thinking" | "calc" | "celebrating">) => {
       setBubble("closed");
+      // Vorführung läuft ohne Menü — großes Fenster wieder abgeben.
+      if (!kursRef.current && !todoRef.current) {
+        setzeFenster(FENSTER.normalB, FENSTER.normalH);
+      }
       setState(demo);
       if (demoTimer.current) clearTimeout(demoTimer.current);
       demoTimer.current = setTimeout(
@@ -279,7 +318,7 @@ export default function App() {
         demo === "celebrating" ? 1900 : DEMO_MS,
       );
     },
-    [],
+    [setzeFenster],
   );
 
   /* --- Kurs öffnen/schließen (Fenster wächst mit — Textfeld-Regel!). ------ */
@@ -295,6 +334,77 @@ export default function App() {
     setState("idle");
     await setzeFenster(FENSTER.normalB, FENSTER.normalH);
   }, [setzeFenster]);
+
+  /* --- Aufgabenzettel öffnen/schließen (gleiches Fenster-Spiel wie Kurs). -- */
+  const todoOeffnen = useCallback(async () => {
+    setBubble("closed");
+    setState("talking");
+    setTodo(true);
+    await setzeFenster(FENSTER.kursB, FENSTER.kursH);
+  }, [setzeFenster]);
+
+  const todoSchliessen = useCallback(async () => {
+    setTodo(false);
+    setState("idle");
+    await setzeFenster(FENSTER.normalB, FENSTER.normalH);
+  }, [setzeFenster]);
+
+  /* Gefühls-Signale vom Zettel: Abhaken freut, alles geschafft wird gefeiert. */
+  const onTodoSignal = useCallback((s: TodoSignal) => {
+    if (!todoRef.current) return;
+    if (demoTimer.current) clearTimeout(demoTimer.current);
+    if (s === "freude") {
+      setState("heart");
+      demoTimer.current = setTimeout(() => setState((x) => (x === "heart" ? "talking" : x)), 1600);
+    } else if (s === "feiern") {
+      setState("celebrating");
+      demoTimer.current = setTimeout(() => setState((x) => (x === "celebrating" ? "talking" : x)), 2200);
+    } else {
+      setState("talking");
+    }
+  }, []);
+
+  /* --- Leiser Hintergrund-Puls: haben die Agenten neue Aufgaben notiert? ---
+     Alle 5 Minuten (nur mit Cloud-Sitzung). Neue Cloud-Einträge → Niemand
+     pulst kurz mit dem Aufmerksamkeits-Ring, weckt aber niemanden auf. */
+  useEffect(() => {
+    let tot = false;
+    const puls = async () => {
+      if (tot || todoRef.current) return;
+      try {
+        const s = await invoke<{ angemeldet: boolean }>("cloud_status");
+        if (tot || !s.angemeldet) return;
+        const e = await syncEinmal();
+        if (
+          !tot &&
+          e.status === "ok" &&
+          e.neuVonCloud > 0 &&
+          !kursRef.current &&
+          !todoRef.current &&
+          stateRef.current !== "sleeping"
+        ) {
+          if (demoTimer.current) clearTimeout(demoTimer.current);
+          setState("attention");
+          demoTimer.current = setTimeout(
+            () => setState((x) => (x === "attention" ? "idle" : x)),
+            6000,
+          );
+        }
+      } catch {
+        /* Cloud gerade nicht erreichbar — nächster Puls versucht es wieder */
+      }
+    };
+    const anlauf = setTimeout(puls, 15_000);
+    const takt = setInterval(puls, 5 * 60_000);
+    const tick = () => setTodoTick((t) => t + 1);
+    window.addEventListener(TODO_EVENT, tick);
+    return () => {
+      tot = true;
+      clearTimeout(anlauf);
+      clearInterval(takt);
+      window.removeEventListener(TODO_EVENT, tick);
+    };
+  }, []);
 
   /* Gefühls-Signale aus dem Kurs → Tierchen-Zustände. */
   const onKursSignal = useCallback((s: PetSignal) => {
@@ -325,7 +435,7 @@ export default function App() {
   /* --- Klick auf den Hasen: Sprechblase auf/zu (Pull statt Push). --------- */
   const onRabbitClick = useCallback(() => {
     wake();
-    if (kursRef.current) {
+    if (kursRef.current || todoRef.current) {
       setState("waving");
       setTimeout(() => setState((s) => (s === "waving" ? "talking" : s)), 1800);
       return;
@@ -335,30 +445,42 @@ export default function App() {
       return;
     }
     if (stateRef.current === "sleeping" || stateRef.current === "heart") return;
-    setBubble((b) => {
-      const next = b === "closed" ? "menu" : "closed";
-      setState(next === "menu" ? "talking" : "idle");
-      if (next === "menu") setFlip(false);
-      return next;
-    });
-  }, [wake]);
+    const next = bubbleRef.current === "closed" ? "menu" : "closed";
+    setBubble(next);
+    setState(next === "menu" ? "talking" : "idle");
+    if (next === "menu") setFlip(false);
+    // Menü bekommt das große Fenster (Platz für alle Knöpfe — Inhaber-Befund
+    // 29.07.: Kunststück-Knöpfe waren abgeschnitten); zu → wieder klein.
+    setzeFenster(
+      next === "menu" ? FENSTER.kursB : FENSTER.normalB,
+      next === "menu" ? FENSTER.kursH : FENSTER.normalH,
+    );
+  }, [wake, setzeFenster]);
 
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (kursRef.current) return; // im Kurs schließt die Kurskarte selbst
+        if (todoRef.current) {
+          todoSchliessen();
+          return;
+        }
         setBubble("closed");
         setState((s) => (s === "talking" || s === "pointing" ? "idle" : s));
+        setzeFenster(FENSTER.normalB, FENSTER.normalH);
       }
     };
     window.addEventListener("keydown", onEsc);
     return () => window.removeEventListener("keydown", onEsc);
-  }, []);
+  }, [todoSchliessen, setzeFenster]);
 
   const closeBubble = () => {
     setBubble("closed");
     setState((s) => (s === "talking" || s === "pointing" ? "idle" : s));
     setFlip(false);
+    if (!kursRef.current && !todoRef.current) {
+      setzeFenster(FENSTER.normalB, FENSTER.normalH);
+    }
   };
 
   /* AUFTRAG-Karte: Einstellungen öffnen — läuft NUR auf Nutzer-Klick. */
@@ -388,19 +510,23 @@ export default function App() {
     );
   };
 
-  // Nur das Hauptmenü lässt den Hasen zur Seite hoppeln — beim „Zeigen“
-  // (Ecke, Arm hoch) bleibt er groß, die kleine Sprechblase reicht dort.
-  const menueOffen = !kurs && bubble === "menu";
+  // Menü, Kurs und Aufgabenzettel lassen den Hasen klein zur Seite hoppeln —
+  // beim „Zeigen“ (Ecke, Arm hoch) bleibt er groß, die kleine Blase reicht dort.
+  const menueOffen = !kurs && !todo && bubble === "menu";
+  const offeneAufgaben = menueOffen
+    ? ladeAufgaben().items.filter((i) => !i.done).length
+    : 0;
 
   return (
     <div
-      className={`stage nobody-wrap--${state}${kurs ? " stage--kurs" : ""}${
+      className={`stage nobody-wrap--${state}${kurs || todo ? " stage--kurs" : ""}${
         menueOffen ? " stage--menu" : ""
       }`}
     >
       {kurs && <Course sprache={sprache} onSignal={onKursSignal} onClose={kursSchliessen} />}
+      {!kurs && todo && <Todo sprache={sprache} onSignal={onTodoSignal} onClose={todoSchliessen} />}
 
-      {!kurs && bubble === "menu" && (
+      {menueOffen && (
         <div className="bubble bubble--panel" role="dialog" aria-label={ui.ariaSpricht}>
           <div className="bubble-title">
             <span>{ui.name}</span>
@@ -408,58 +534,68 @@ export default function App() {
               ✕
             </button>
           </div>
-          <p className="bubble-text">{ui.gruss}</p>
-          <div className="bubble-actions">
-            <button className="bubble-btn bubble-btn--primary" onClick={kursOeffnen}>
-              {kursKnopf}
-            </button>
-            <button className="bubble-btn" onClick={showSettings}>
-              {ui.einstellungenZeigen}
-            </button>
-          </div>
-          <div className="gag-zeile">
-            <span className="gag-label">{ui.kunststuecke}</span>
-            <button className="gag-btn" onClick={hopAcross} aria-label={ui.hoppelnHint} title={ui.hoppelnHint}>
-              🐇
-            </button>
-            <button
-              className="gag-btn"
-              onClick={() => playDemo("thinking")}
-              aria-label={ui.nachdenkenHint}
-              title={ui.nachdenkenHint}
-            >
-              💭
-            </button>
-            <button className="gag-btn" onClick={rechnenKlick} aria-label={ui.rechnenHint} title={ui.rechnenHint}>
-              🔢
-            </button>
-            <button
-              className="gag-btn"
-              onClick={() => playDemo("celebrating")}
-              aria-label={ui.freuenHint}
-              title={ui.freuenHint}
-            >
-              🎉
-            </button>
-          </div>
-          <div className="bubble-grid">
-            <button
-              className="bubble-btn"
-              onClick={() => {
-                setBubble("closed");
-                setState("sleeping");
-              }}
-            >
-              {ui.schlafen}
-            </button>
-            <button className="bubble-btn" onClick={sprachWechsel}>
-              {ui.sprachWechsel}
-            </button>
-          </div>
-          <div className="bubble-actions" style={{ marginTop: 8 }}>
-            <button className="bubble-btn" onClick={() => invoke("quit_app")}>
-              {ui.beenden}
-            </button>
+          {/* Alles unterhalb des Titels scrollt zur Not GEMEINSAM — kein Knopf
+              wird je gestaucht oder abgeschnitten (Inhaber-Befund 29.07.). */}
+          <div className="menu-scroll">
+            <p className="bubble-text bubble-text--gruss">{ui.gruss}</p>
+            <div className="bubble-actions">
+              <button className="bubble-btn bubble-btn--primary" onClick={kursOeffnen}>
+                {kursKnopf}
+              </button>
+              <button className="bubble-btn bubble-btn--primary" onClick={todoOeffnen}>
+                {offeneAufgaben > 0 ? ui.aufgabenKnopfMit(offeneAufgaben) : ui.aufgabenKnopf}
+              </button>
+              <button className="bubble-btn" onClick={showSettings}>
+                {ui.einstellungenZeigen}
+              </button>
+            </div>
+            <div className="gag-block">
+              <span className="gag-label">{ui.kunststuecke}</span>
+              <div className="gag-grid">
+                <button className="gag-btn" onClick={hopAcross} aria-label={ui.hoppelnHint} title={ui.hoppelnHint}>
+                  🐇
+                </button>
+                <button
+                  className="gag-btn"
+                  onClick={() => playDemo("thinking")}
+                  aria-label={ui.nachdenkenHint}
+                  title={ui.nachdenkenHint}
+                >
+                  💭
+                </button>
+                <button className="gag-btn" onClick={rechnenKlick} aria-label={ui.rechnenHint} title={ui.rechnenHint}>
+                  🔢
+                </button>
+                <button
+                  className="gag-btn"
+                  onClick={() => playDemo("celebrating")}
+                  aria-label={ui.freuenHint}
+                  title={ui.freuenHint}
+                >
+                  🎉
+                </button>
+              </div>
+            </div>
+            <div className="bubble-grid">
+              <button
+                className="bubble-btn"
+                onClick={() => {
+                  setBubble("closed");
+                  setzeFenster(FENSTER.normalB, FENSTER.normalH);
+                  setState("sleeping");
+                }}
+              >
+                {ui.schlafen}
+              </button>
+              <button className="bubble-btn" onClick={sprachWechsel}>
+                {ui.sprachWechsel}
+              </button>
+            </div>
+            <div className="bubble-actions">
+              <button className="bubble-btn" onClick={() => invoke("quit_app")}>
+                {ui.beenden}
+              </button>
+            </div>
           </div>
         </div>
       )}
