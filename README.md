@@ -10,7 +10,8 @@ Tabs und Favoriten — und zum Schluss stellt er dir deine KI-Helfer auf
 [cloud.smartragents.ai](https://cloud.smartragents.ai) vor. Der Kurs passt sich an:
 an dein Wissen (drei kurze Fragen am Anfang) und an dein Leben (Ruhestand, Beruf
 oder Ausbildung — jeder bekommt seine eigenen Beispiele, Senioren größere Schrift).
-**Der Kurs ist gratis. Für immer.** Niemand spricht Deutsch und Englisch.
+**Der Kurs ist gratis. Für immer.** Niemand spricht Deutsch und Englisch —
+und jede Sprache, die jemand beisteuert. [Mach mit](#mitmachen) 🐇
 
 > **Mensch mit Maschine:** Niemand erklärt und schlägt vor — ausgeführt wird nur,
 > was du selbst anklickst. Er unterbricht dich nie von sich aus.
@@ -24,7 +25,8 @@ passwords, shutting down properly, the browser with tabs and favorites — and t
 introduces your AI helpers at [cloud.smartragents.ai](https://cloud.smartragents.ai).
 The course adapts to your knowledge (quick check at the start) and your life
 situation (retirement, work or school — everyone gets their own examples, seniors
-get bigger text). Nobody speaks English and German. The course is free. Forever.
+get bigger text). Nobody speaks English and German — and any language someone
+contributes. The course is free. Forever. **[Contributions welcome](#mitmachen)** 🐇
 
 ## Herunterladen
 
@@ -66,6 +68,39 @@ tick, delete deliberately in three taps (tick → bin → gone). Connect your
 SMarTrAgents account and the list also lives in your cloud notes — your AI agents
 can add tasks for you, and Nobody gives a gentle pulse when something new arrives.
 
+## Mitmachen
+
+Niemand ist für Menschen gebaut, die am Computer unsicher sind — oft ältere
+Menschen, oft Leute, die nie die Gelegenheit hatten, es in Ruhe zu lernen.
+**Jede Sprache, die dazukommt, sind Menschen, die vorher außen vor waren.**
+
+Der einfachste Einstieg ist eine Übersetzung, und du musst dafür **nichts
+fertig machen**:
+
+* Deutsch ist die einzige Pflichtsprache. Was in deiner Sprache fehlt, fällt
+  auf Deutsch zurück — es baut also auch bei 3 %.
+* Schick den Stand als Pull Request. Auch drei Sätze. Der Nächste macht weiter.
+* Deine Sprache erscheint in der Auswahl erst, wenn sie ganz da ist. Bis dahin
+  sieht kein Nutzer etwas Halbfertiges, und deine Arbeit liegt sicher im
+  Projekt.
+* `npm run sprachen` sagt dir jederzeit, wie weit du bist:
+
+```
+  🏠 Deutsch      100 %  ████████████████████  in der Auswahl sichtbar
+  ✅ English      100 %  ████████████████████  in der Auswahl sichtbar
+  🔸 Français       3 %  █···················  noch nicht sichtbar — es fehlen 140
+```
+
+**Du kannst auch ohne Programmierkenntnisse helfen:** Probier Niemand aus und
+sag uns, wo du gestockt hast. „Ich habe es nicht verstanden" ist bei diesem
+Programm der wertvollste Fehlerbericht, den es gibt.
+
+👉 [Offene Aufgaben für den Einstieg](../../issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+· [CONTRIBUTING.md](CONTRIBUTING.md)
+
+*English: the same goes for you — see [CONTRIBUTING.md](CONTRIBUTING.md).
+Partial translations are explicitly welcome.*
+
 ## Entwicklung
 
 Tech-Stack: [Tauri 2](https://tauri.app) (Rust) + React + TypeScript. Kein Electron —
@@ -90,6 +125,8 @@ kein Always-on-top).
 - [x] **0.5** — zweisprachig Deutsch/Englisch
 - [x] **0.6** — Aufgabenzettel mit Cloud-Sync: Anmeldung am SMarTrAgents-Konto,
       Notiz `workdir/notepad/Niemand-Aufgaben.md`, Agenten schreiben mit
+- [x] **0.7** — offen für weitere Sprachen: Teilübersetzungen sind mergefähig,
+      eine Sprache erscheint, sobald sie vollständig ist
 - [ ] **Präsenz-Sync** — Desktop-Niemand blendet den Cloud-Niemand aus
 - [ ] **Vorlesen** (deutsche Stimme, auch offline)
 - [ ] **Signierte Installer** + Auto-Update
@@ -97,7 +134,7 @@ kein Always-on-top).
 
 ## Lizenz
 
-MIT — siehe [LICENSE](LICENSE).
+MIT — siehe [LICENSE](LICENSE) und [NOTICE](NOTICE).
 
 ---
 
